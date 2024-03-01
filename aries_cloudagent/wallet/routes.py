@@ -40,6 +40,8 @@ from ..messaging.valid import (
     SD_JWT_VALIDATE,
     NON_SD_LIST_EXAMPLE,
     NON_SD_LIST_VALIDATE,
+    CSR_EXAMPLE,
+    CSR_VALIDATE,
     IndyDID,
     StrOrDictField,
     Uri,
@@ -70,6 +72,27 @@ LOGGER = logging.getLogger(__name__)
 
 class WalletModuleResponseSchema(OpenAPISchema):
     """Response schema for Wallet Module."""
+
+
+# torjc01
+class DIDCSRScheme(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    method = fields.Str(
+        required=True,
+        metadata={
+            "description": "Did method associated with the DID",
+            "example": SOV.method_name,
+        },
+    )
+    csr = fields.Str(
+        required=True,
+        metadata={"description": "CSR generated", "example": CSR_EXAMPLE},
+    )
+    
 
 
 class DIDSchema(OpenAPISchema):
@@ -121,6 +144,9 @@ class DIDResultSchema(OpenAPISchema):
 
     result = fields.Nested(DIDSchema())
 
+# torjc01 
+class DIDCSRResultScheme(OpenAPISchema):
+    result = fields.Nested(DIDSchema())
 
 class DIDListSchema(OpenAPISchema):
     """Result schema for connection list."""
@@ -257,6 +283,20 @@ class DIDEndpointSchema(OpenAPISchema):
         },
     )
 
+
+# torjc01
+class DIDCSRQueryStringScheme(OpenAPISchema):
+
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    key_type = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
 
 class DIDListQueryStringSchema(OpenAPISchema):
     """Parameters and validators for DID list request query string."""
@@ -416,6 +456,21 @@ def format_did_info(info: DIDInfo):
             "key_type": info.key_type.key_type,
             "method": info.method.method_name,
         }
+
+
+# torjc01
+    
+@docs(tags=["wallet"], summary="Retrieve Certificate Signing Request (CSR) for a DID")
+@querystring_schema(DIDCSRQueryStringScheme())
+@response_schema(DIDCSRResultScheme, 200, description="")
+async def wallet_did_csr(request: web.BaseRequest):
+    
+    context: AdminRequestContext = request["context"]
+    filter_did = request.query.get("did")
+
+    results = []
+    results.append({"did": filter_did})
+    return web.json_response({"results": results})
 
 
 @docs(tags=["wallet"], summary="List wallet DIDs")
@@ -1258,7 +1313,7 @@ async def on_register_nym_event(profile: Profile, event: Event):
                     did,
                 )
 
-
+# torjc01
 async def register(app: web.Application):
     """Register routes."""
 
@@ -1273,10 +1328,9 @@ async def register(app: web.Application):
             web.post("/wallet/jwt/verify", wallet_jwt_verify),
             web.post("/wallet/sd-jwt/sign", wallet_sd_jwt_sign),
             web.post("/wallet/sd-jwt/verify", wallet_sd_jwt_verify),
-            web.get(
-                "/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False
-            ),
+            web.get("/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False),
             web.patch("/wallet/did/local/rotate-keypair", wallet_rotate_did_keypair),
+            web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
         ]
     )
 
