@@ -62,7 +62,7 @@ from .did_info import DIDInfo
 from .did_method import KEY, SOV, DIDMethod, DIDMethods, HolderDefinedDid
 from .did_posture import DIDPosture
 from .error import WalletError, WalletNotFoundError
-from .key_type import BLS12381G2, ED25519, KeyTypes
+from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyTypes
 from .util import EVENT_LISTENER_PATTERN
 
 LOGGER = logging.getLogger(__name__)
@@ -311,13 +311,17 @@ class DIDQueryStringSchema(OpenAPISchema):
         metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
     )
 
-
+# torjc01
 class DIDCreateOptionsSchema(OpenAPISchema):
     """Parameters and validators for create DID options."""
 
     key_type = fields.Str(
         required=True,
-        validate=validate.OneOf([ED25519.key_type, BLS12381G2.key_type]),
+        validate=validate.OneOf([ED25519.key_type, 
+                                 BLS12381G2.key_type, 
+                                 ECDSAP256.key_type, 
+                                 ECDSAP384.key_type, 
+                                 ECDSAP521.key_type]),
         metadata={
             "example": ED25519.key_type,
             "description": (
