@@ -34,6 +34,8 @@ from .did_method import SOV, DIDMethod, DIDMethods
 from .error import WalletError, WalletDuplicateError, WalletNotFoundError
 from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyType, KeyTypes
 from .util import b58_to_bytes, bytes_to_b58
+from .csr import create_csr  # torjc01
+from cryptography.hazmat.primitives import serialization
 
 CATEGORY_DID = "did"
 CATEGORY_CONFIG = "config"
@@ -201,12 +203,31 @@ class AskarWallet(BaseWallet):
 
         try:
             keypair = _create_keypair(key_type, seed)
+            keypair_bytes = keypair.get_secret_bytes()    # torjc01
             verkey_bytes = keypair.get_public_bytes()
             verkey = bytes_to_b58(verkey_bytes)
 
             did = did_validation.validate_or_derive_did(
                 method, key_type, verkey_bytes, did
             )
+            
+            print("keypair: ", keypair)
+            print("keypair_bytes: ", keypair_bytes)
+            print("secret_bytes: ", keypair.get_secret_bytes())
+            print("verkey_bytes: ", verkey_bytes)
+            # torjc01
+            common_name = did
+            country = "CA"
+            state = "QC"
+            city = "Quebec"
+            organization = "Societe Assurance Automobile Quebec"
+            organizational_unit = "PKI Interne mDL SAAQ"
+            email = "cqen@cqen.gouv.qc.ca" 
+            key = keypair.get_public_bytes() 
+
+            # Generation de la CSR
+            csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, key)
+            print(csr.public_bytes(serialization.Encoding.PEM).decode("utf-8"))
 
             try:
                 await self._session.handle.insert_key(
