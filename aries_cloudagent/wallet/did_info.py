@@ -5,7 +5,7 @@ from typing import NamedTuple
 from .did_method import DIDMethod
 from .key_type import KeyType
 
-# torjc01
+# torjc01 - rajouter les types de retour pour la CSR?
 
 KeyInfo = NamedTuple(
     "KeyInfo", [("verkey", str), ("metadata", dict), ("key_type", KeyType)]
