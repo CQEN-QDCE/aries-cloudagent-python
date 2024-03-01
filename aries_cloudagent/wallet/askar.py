@@ -32,7 +32,7 @@ from .crypto import (
 )
 from .did_method import SOV, DIDMethod, DIDMethods
 from .error import WalletError, WalletDuplicateError, WalletNotFoundError
-from .key_type import BLS12381G2, ED25519, KeyType, KeyTypes
+from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyType, KeyTypes
 from .util import b58_to_bytes, bytes_to_b58
 
 CATEGORY_DID = "did"
@@ -787,6 +787,16 @@ def _create_keypair(key_type: KeyType, seed: Union[str, bytes, None] = None) -> 
         method = SeedMethod.BlsKeyGen
     # elif key_type == BLS12381G1G2:
     #     alg = KeyAlg.BLS12_381_G1G2
+    elif key_type == ECDSAP256:
+        print("ECDSAP256")
+        alg = KeyAlg.ECDSAP256
+        method = None
+    elif key_type == ECDSAP384:
+        alg = KeyAlg.ECDSAP384
+        method = None
+    elif key_type == ECDSAP521:
+        alg = KeyAlg.ECDSAP521
+        method = None
     else:
         raise WalletError(f"Unsupported key algorithm: {key_type}")
     if seed:
