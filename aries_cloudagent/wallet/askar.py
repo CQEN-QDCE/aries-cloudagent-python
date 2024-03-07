@@ -226,8 +226,8 @@ class AskarWallet(BaseWallet):
             key = keypair.get_public_bytes() 
 
             # Generation de la CSR
-            csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, key)
-            print(csr.public_bytes(serialization.Encoding.PEM).decode("utf-8"))
+            # csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, key)
+            # print(csr.public_bytes(serialization.Encoding.PEM).decode("utf-8"))
 
             try:
                 await self._session.handle.insert_key(
