@@ -85,7 +85,7 @@ class DIDCSRScheme(OpenAPISchema):
         required=True,
         metadata={
             "description": "Did method associated with the DID",
-            "example": SOV.method_name,
+            "example": KEY.method_name,
         },
     )
     csr = fields.Str(
@@ -146,7 +146,7 @@ class DIDResultSchema(OpenAPISchema):
 
 # torjc01 
 class DIDCSRResultScheme(OpenAPISchema):
-    result = fields.Nested(DIDSchema())
+    result = fields.Nested(DIDCSRScheme())
 
 class DIDListSchema(OpenAPISchema):
     """Result schema for connection list."""
@@ -467,9 +467,10 @@ async def wallet_did_csr(request: web.BaseRequest):
     
     context: AdminRequestContext = request["context"]
     filter_did = request.query.get("did")
+    method = request.query.get("method") if request.query.get("method") is not None else "key"
 
     results = []
-    results.append({"did": filter_did})
+    results.append({"did": filter_did, "method": method, "csr": CSR_EXAMPLE})
     return web.json_response({"results": results})
 
 
