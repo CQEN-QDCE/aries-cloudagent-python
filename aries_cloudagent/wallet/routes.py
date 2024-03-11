@@ -1,5 +1,6 @@
 """Wallet admin routes."""
 
+import base64
 import json
 import logging
 from typing import List, Optional, Tuple, Union
@@ -57,7 +58,7 @@ from ..protocols.endorse_transaction.v1_0.util import (
 )
 from ..resolver.base import ResolverError
 from ..storage.error import StorageError, StorageNotFoundError
-from ..wallet.jwt import jwt_sign, jwt_verify
+from ..wallet.jwt import did_lookup_name, jwt_sign, jwt_verify
 from ..wallet.sd_jwt import sd_jwt_sign, sd_jwt_verify
 from .base import BaseWallet
 from .did_info import DIDInfo
@@ -66,6 +67,11 @@ from .did_posture import DIDPosture
 from .error import WalletError, WalletNotFoundError
 from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyTypes
 from .util import EVENT_LISTENER_PATTERN
+
+# torjc01
+from .csr import create_csr  # torjc01
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 LOGGER = logging.getLogger(__name__)
 
@@ -468,9 +474,57 @@ async def wallet_did_csr(request: web.BaseRequest):
     context: AdminRequestContext = request["context"]
     filter_did = request.query.get("did")
     method = request.query.get("method") if request.query.get("method") is not None else "key"
-
     results = []
-    results.append({"did": filter_did, "method": method, "csr": CSR_EXAMPLE})
+    profile = context.profile
+    
+    # torjc01
+    common_name = filter_did
+    country = "CA"
+    state = "QC"
+    city = "Quebec"
+    organization = "Societe Assurance Automobile Quebec"
+    organizational_unit = "PKI Interne mDL SAAQ"
+    email = "cqen@cqen.gouv.qc.ca" 
+
+    async with profile.session() as session:
+        wallet = session.inject_or(BaseWallet)
+        if not wallet:
+            raise web.HTTPForbidden(reason="No wallet available")
+        try:
+            # Load the private key encoded in the wallet and derive the private key for use with Cryptography library
+            did_info = await wallet.get_local_did(did_lookup_name(filter_did))
+            key_pair = await wallet._session.handle.fetch_key(did_info.verkey)
+            jwt_bytes = key_pair.key.get_jwk_secret()
+            json_web_key = json.loads(jwt_bytes.decode())
+
+            crv = None
+            match json_web_key['crv']:
+                case "P-256":
+                    crv = ec.SECP256R1()
+                case "P-384":
+                    crv = ec.SECP384R1()
+                case "P-521":
+                    crv = ec.SECP521R1()
+                case "Ed25519":
+                    print("Ed25519: add support to this curve type")
+                    crv = ec.Ed25519()
+                case _:
+                    raise web.HTTPBadRequest(reason="Unsupported curve type")
+                
+            # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
+            privateKey_bytes = ec.derive_private_key(
+                int.from_bytes(base64.urlsafe_b64decode(json_web_key['d'] + '=='), "big"),
+                crv
+            )
+            
+            # Generate the CSR, encoding it in PEM format and removing the newlines
+            csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, privateKey_bytes)
+            csr_out = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8").replace('\n', '')
+           
+        except WalletError as err:
+            raise web.HTTPBadRequest(reason=err.roll_up) from err
+
+    results.append({"did": filter_did, "method": method, "csr": csr_out })
     return web.json_response({"results": results})
 
 
