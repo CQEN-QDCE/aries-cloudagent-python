@@ -578,12 +578,18 @@ async def wallet_did_csr(request: web.BaseRequest):
             
             # Generate the CSR, encoding it in PEM format and removing the newlines
             csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, privateKey_bytes)
-            csr_out = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8").replace('\n', '')
+            csr_out = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
            
+            # Write the CSR to a temp file           
+            with open(filter_did + ".csr", "w") as f:
+                f.write(csr_out)
+                f.close()
+
+
         except WalletError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-    results.append({"did": filter_did, "method": method, "csr": csr_out })
+    results.append({"did": filter_did, "method": method, "csr": csr_out.replace('\n', '') })
     return web.json_response({"results": results})
 
 
