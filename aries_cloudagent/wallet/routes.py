@@ -94,13 +94,39 @@ class DIDCSRScheme(OpenAPISchema):
             "example": KEY.method_name,
         },
     )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+    country = fields.Str(
+        required=False,
+        metadata={"description": "Country for the CSR", "example": "CA"},
+    )   
+    state = fields.Str( 
+        required=False,
+        metadata={"description": "State for the CSR", "example": "Quebec"},
+    )
+    city = fields.Str(
+        required=False,
+        metadata={"description": "City for the CSR", "example": "Quebec"},
+    )
+    organization = fields.Str(
+        required=False,
+        metadata={"description": "Organization for the CSR", "example": "Hyperledger"},
+    )
+    organizational_unit = fields.Str(
+        required=False,
+        metadata={"description": "Organizational unit for the CSR", "example": "Hyperledger PKI Authority"},
+    )
+    email = fields.Str(
+        required=False,
+        metadata={"description": "Email for the CSR", "example": "owner@hyperledger.com"},
+    )
     csr = fields.Str(
         required=True,
         metadata={"description": "CSR generated", "example": CSR_EXAMPLE},
     )
     
-
-
 class DIDSchema(OpenAPISchema):
     """Result schema for a DID."""
 
@@ -303,6 +329,35 @@ class DIDCSRQueryStringScheme(OpenAPISchema):
         validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
         metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
     )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+    country = fields.Str(
+        required=False,
+        metadata={"description": "Country for the CSR", "example": "CA"},
+    )
+    state = fields.Str(
+        required=False,
+        metadata={"description": "State for the CSR", "example": "Quebec"},
+    )
+    city = fields.Str(
+        required=False,
+        metadata={"description": "City for the CSR", "example": "Quebec"},
+    )
+    organization = fields.Str(
+        required=False,
+        metadata={"description": "Organization for the CSR", "example": "Hyperledger"},
+    )
+    organizational_unit = fields.Str(
+        required=False,
+        metadata={"description": "Organizational unit for the CSR", "example": "Hyperledger PKI Authority"},
+    )
+    email = fields.Str(
+        required=False,
+        metadata={"description": "Email for the CSR", "example": ""},
+    )
+                  
 
 class DIDListQueryStringSchema(OpenAPISchema):
     """Parameters and validators for DID list request query string."""
@@ -472,19 +527,23 @@ def format_did_info(info: DIDInfo):
 async def wallet_did_csr(request: web.BaseRequest):
     
     context: AdminRequestContext = request["context"]
-    filter_did = request.query.get("did")
-    method = request.query.get("method") if request.query.get("method") is not None else "key"
-    results = []
+
     profile = context.profile
     
-    # torjc01
+    # Retrieve parameters 
+    filter_did = request.query.get("did")
+    method = request.query.get("method") if request.query.get("method") is not None else "key"
     common_name = filter_did
-    country = "CA"
-    state = "QC"
-    city = "Quebec"
-    organization = "Societe Assurance Automobile Quebec"
-    organizational_unit = "PKI Interne mDL SAAQ"
-    email = "cqen@cqen.gouv.qc.ca" 
+    country = request.query.get("country")
+    state = request.query.get("state")
+    city = request.query.get("city")
+    organization = request.query.get("organization")
+    organizational_unit = request.query.get("organizational_unit")
+    email = request.query.get("email")
+    
+    
+    
+    results = []
 
     async with profile.session() as session:
         wallet = session.inject_or(BaseWallet)
