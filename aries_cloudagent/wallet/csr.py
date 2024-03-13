@@ -14,46 +14,63 @@ def create_csr( common_name, country=None, state=None, city=None,
     country, state, city, organization, organizational unit, and email.
 
     Args:
-        common_name (str): The common name for the CSR (e.g., the fully-qualified domain name).
+        common_name (str): The common name for the CSR (e.g., the fully-qualified domain name). This attribute is required.
         country (str, optional): The two-letter ISO code for the country. Defaults to None.
         state (str, optional): The full name of the state or province. Defaults to None.
         city (str, optional): The name of the city. Defaults to None.
         organization (str, optional): The name of the organization. Defaults to None.
         organizational_unit (str, optional): The name of the organizational unit. Defaults to None.
         email (str, optional): The email address. Defaults to None.
-        key (cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey, optional): The private key to sign the CSR. Defaults to None.
-
+        key (cryptography.hazmat.primitives.asymmetric.ec): The private key to sign the CSR. Defaults to None. This attribute is required.
     Returns:
         x509.CertificateSigningRequest: The generated CSR.
 
     Raises:
-        ValueError: If the common_name is not a valid domain name or IP address.
+        ValueError: If the common_name is not a valid identification name, domain name or IP address.
     """
 
-    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
+    if not common_name:
+        raise ValueError("common_name is required")
+    
+    # Provide various details about who we are.Create the optional attributes for the CSR 
+    # if they are provided. At the end, add the mandatory common name.
+    attributes = []
 
-        # Provide various details about who we are.
+    if country:
+        attributes.append(x509.NameAttribute(NameOID.COUNTRY_NAME, country))
+    if state:
+        attributes.append(x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state))
+    if city:
+        attributes.append(x509.NameAttribute(NameOID.LOCALITY_NAME, city))
+    if organization:
+        attributes.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization))
+    if organizational_unit:
+        attributes.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, organizational_unit))
 
-        x509.NameAttribute(NameOID.COUNTRY_NAME, country),
+    # Add the mandatory common name attribute to the CSR
+    attributes.append(x509.NameAttribute(NameOID.COMMON_NAME, common_name))
+    
+    # Add the extensions values to the CSR
+    extensions = []
 
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state),
+    if email:
+        extensions.append(x509.RFC822Name(email))
 
-        x509.NameAttribute(NameOID.LOCALITY_NAME, city),
 
-        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, organizational_unit),
+    # Create the CSR with the provided details.
+    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name(
 
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
+        # Identification attributes
+        attributes
 
-        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+    )).add_extension(
 
-    ])).add_extension(
-
-        x509.SubjectAlternativeName([
+        x509.SubjectAlternativeName(
 
             # Email 
-            x509.RFC822Name(email), 
+            extensions
 
-        ]),
+        ),
 
         critical=False,
 
