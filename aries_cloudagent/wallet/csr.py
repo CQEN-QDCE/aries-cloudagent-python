@@ -1,9 +1,14 @@
-from cryptography import x509
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization 
-from cryptography.hazmat.primitives.asymmetric import rsa
+from   cryptography import x509
+from   cryptography.x509.oid import NameOID
+from   cryptography.hazmat.primitives.asymmetric.ec import hashes
+from   cryptography.hazmat.primitives.asymmetric import ec
+from   cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+# Supported elliptic curves
+CURVE_P256      = "P256"
+CURVE_P384      = "P384"
+CURVE_P521      = "P521"
+CURVE_ED25519   = "Ed25519"
 
 def create_csr( common_name, 
                 country="CA", 
@@ -77,3 +82,36 @@ def create_csr( common_name,
     csr_builder = csr_builder.sign(key, hashes.SHA256())
 
     return csr_builder
+
+
+def generateKeyPair(curveName: str):
+    """
+    Generates a key pair using the specified algorithm.
+
+    This function generates a public and private key pair using the algorithm specified by the curveName parameter.
+
+    Args:
+        curveName (str): The name of the key generation algorithm to use. 
+        This should be a string representing a valid supported elliptic curve, such as 'P256', 'P384', 'P521' or 'Ed25519'.
+
+    Returns:
+        tuple: A tuple containing the generated private and public keys, in that order.
+
+    Raises:
+        ValueError: If the curveName parameter is not a recognized key generation algorithm.
+    """
+    keyPair = None
+
+    if   curveName.casefold() == CURVE_P256.casefold():
+         keyPair =   ec.generate_private_key(ec.SECP256R1())
+    elif curveName.casefold() == CURVE_P384.casefold():
+         keyPair =   ec.generate_private_key(ec.SECP384R1())
+    elif curveName.casefold() == CURVE_P521.casefold():
+         keyPair =   ec.generate_private_key(ec.SECP521R1())
+    elif curveName.casefold() == CURVE_ED25519.casefold():
+         keyPair =   Ed25519PrivateKey.generate()
+    else:
+        print("Unsupported curve name. Supported curve names are P256, P384, P521 and Ed25519.")
+        return None
+
+    return keyPair
