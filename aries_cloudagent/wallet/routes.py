@@ -69,7 +69,8 @@ from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyT
 from .util import EVENT_LISTENER_PATTERN
 
 # torjc01
-from .csr import create_csr  # torjc01
+from .csr import create_csr, generateKeyPair
+from .util import bytes_to_b58
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -127,6 +128,23 @@ class DIDCSRScheme(OpenAPISchema):
         metadata={"description": "CSR generated", "example": CSR_EXAMPLE},
     )
     
+# torjc01
+class DIDx509Scheme(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    method = fields.Str(
+        required=True,
+        metadata={
+            "description": "Did method associated with the DID",
+            "example": KEY.method_name,
+        },
+    )
+    
+
+
 class DIDSchema(OpenAPISchema):
     """Result schema for a DID."""
 
@@ -179,6 +197,10 @@ class DIDResultSchema(OpenAPISchema):
 # torjc01 
 class DIDCSRResultScheme(OpenAPISchema):
     result = fields.Nested(DIDCSRScheme())
+
+# torjc01 
+class DIDx509ResultScheme(OpenAPISchema):
+    result = fields.Nested(DIDx509Scheme())
 
 class DIDListSchema(OpenAPISchema):
     """Result schema for connection list."""
@@ -359,6 +381,20 @@ class DIDCSRQueryStringScheme(OpenAPISchema):
     )
                   
 
+# torjc01
+class DIDx509QueryStringScheme(OpenAPISchema):
+
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    key_type = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
+
 class DIDListQueryStringSchema(OpenAPISchema):
     """Parameters and validators for DID list request query string."""
 
@@ -518,6 +554,52 @@ def format_did_info(info: DIDInfo):
             "method": info.method.method_name,
         }
 
+# torjc01
+@docs(tags=["wallet"], summary="Create a key pair and a Certificate Signing Request (CSR) for a x509 certificate")
+@querystring_schema(DIDx509QueryStringScheme())
+@response_schema(DIDx509ResultScheme, 200, description="")
+async def wallet_x509_keypair(request: web.BaseRequest):
+
+    context: AdminRequestContext = request["context"]
+
+    profile = context.profile
+
+    results = []
+    # Retrieve parameters
+    filter_did = request.query.get("did")
+    keyType = request.query.get("key_type")
+
+    if keyType is None:
+        raise web.HTTPBadRequest(reason="Key type is required")
+    
+    if keyType.casefold() not in [
+        "ed25519".casefold(), 
+        "p256".casefold(), 
+        "p384".casefold(), 
+        "p521".casefold()]:
+        raise web.HTTPBadRequest(reason="Unsupported key type")
+    
+    keyPair = None
+    keyPair = generateKeyPair(keyType)
+
+    if keyPair is None:
+        raise web.HTTPBadRequest(reason="Error generating key pair")    
+
+    print("Key type: ", keyType)    
+    print("Generated key pair: ", keyPair)
+
+    publicKey = keyPair.public_key().public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode("utf-8")
+    publicKey_bytes = keyPair.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    verkey = bytes_to_b58(publicKey_bytes)
+    # privateKey = keyPair.private_bytes()
+
+    print("Public key: ", publicKey)
+    print("Verkey: ", verkey)
+    # print("Private key: ", base64.urlsafe_b64encode(keyPair))
+
+    results.append({"did": filter_did,  })
+    return web.json_response({"results": results})
+
 
 # torjc01
     
@@ -540,8 +622,6 @@ async def wallet_did_csr(request: web.BaseRequest):
     organization = request.query.get("organization")
     organizational_unit = request.query.get("organizational_unit")
     email = request.query.get("email")
-    
-    
     
     results = []
 
@@ -1451,6 +1531,7 @@ async def register(app: web.Application):
             web.get("/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False),
             web.patch("/wallet/did/local/rotate-keypair", wallet_rotate_did_keypair),
             web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
+            web.post("/wallet/x509/keypair", wallet_x509_keypair),
         ]
     )
 
