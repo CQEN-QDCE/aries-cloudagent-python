@@ -1,14 +1,53 @@
-from   cryptography import x509
-from   cryptography.x509.oid import NameOID
+from   cryptography                                 import x509
+from   cryptography.x509.oid                        import NameOID
 from   cryptography.hazmat.primitives.asymmetric.ec import hashes
-from   cryptography.hazmat.primitives.asymmetric import ec
-from   cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from   cryptography.hazmat.primitives.asymmetric    import ec
+from   cryptography.hazmat.primitives               import serialization
+from   jwt                                          import InvalidSignatureError
 
 # Supported elliptic curves
 CURVE_P256      = "P256"
 CURVE_P384      = "P384"
 CURVE_P521      = "P521"
 CURVE_ED25519   = "Ed25519"
+
+# Supported hashing algorithms
+HASH_SHA256     = "SHA256"
+HASH_SHA384     = "SHA384"
+HASH_SHA512     = "SHA512"
+
+def generateKeypair(curveName: str):
+    """
+    Generates a key pair using the specified algorithm.
+
+    This function generates a public and private key pair using the algorithm specified by the curveName parameter.
+
+    Args:
+        curveName (str): The name of the key generation algorithm to use. 
+        This should be a string representing a valid supported elliptic curve, such as 'P256', 'P384', 'P521' or 'Ed25519'.
+
+    Returns:
+        tuple: A tuple containing the generated private and public keys, in that order.
+
+    Raises:
+        ValueError: If the curveName parameter is not a recognized key generation algorithm.
+    """
+    keypair = None
+
+    if   curveName.casefold() == CURVE_P256.casefold():
+         keypair =   ec.generate_private_key(ec.SECP256R1())
+    elif curveName.casefold() == CURVE_P384.casefold():
+         keypair =   ec.generate_private_key(ec.SECP384R1())
+    elif curveName.casefold() == CURVE_P521.casefold():
+         keypair =   ec.generate_private_key(ec.SECP521R1())
+    #elif curveName.casefold() == CURVE_ED25519.casefold():
+    #     keypair =   Ed25519PrivateKey.generate()
+    else:
+        print("Unsupported curve name. Supported curve names are P256, P384, P521.") # and Ed25519
+        return None
+
+    return keypair
+
 
 def create_csr( common_name, 
                 country="CA", 
@@ -83,35 +122,237 @@ def create_csr( common_name,
 
     return csr_builder
 
+"""
+def sign(payload, hashAlg, privKey):
+    
+    This function signs a message using a private key.
 
-def generateKeyPair(curveName: str):
-    """
-    Generates a key pair using the specified algorithm.
-
-    This function generates a public and private key pair using the algorithm specified by the curveName parameter.
-
-    Args:
-        curveName (str): The name of the key generation algorithm to use. 
-        This should be a string representing a valid supported elliptic curve, such as 'P256', 'P384', 'P521' or 'Ed25519'.
+    Parameters:
+    payload : The message to be signed.
+    hashAlg : The algorithm used to sign the message.
+    privKey : The private key used to sign the message.
 
     Returns:
-        tuple: A tuple containing the generated private and public keys, in that order.
+    signature : The signature of the message.
+    
 
-    Raises:
-        ValueError: If the curveName parameter is not a recognized key generation algorithm.
+    if isinstance(payload, str):
+        print("payload is a string")
+        payload = payload.encode()
+    else: 
+        print("payload is not a string")
+
+    signature = privKey.sign(
+        payload,
+        hashAlg
+    )
+    return signature
+
+"""
+
+"""
+def verify(payload, signature, hashAlg, pubKey):
+   
+    This function verifies a signature.
+
+    Parameters:
+    payload : The message to be verified.
+    signature : The signature to be verified.
+    hashAlg : The algorithm used to sign the message.
+    pubKey : The public key used to verify the signature.
+
+    Returns:
+    boolean : True if the signature is valid, False otherwise.
+
+
+    if isinstance(payload, str):
+        payload = payload.encode()
+
+    try:
+        pubKey.verify(
+            signature,
+            payload,
+            hashAlg
+        )
+    except InvalidSignatureError:
+        return False
+    except Exception as e: 
+        return False
+
+    return True
+"""
+
+
+def serializePair(pubKey, pubkeyFileName, privKey, privkeyFileName):
     """
-    keyPair = None
+    This function serializes a public and private key pair and writes them to files.
 
-    if   curveName.casefold() == CURVE_P256.casefold():
-         keyPair =   ec.generate_private_key(ec.SECP256R1())
-    elif curveName.casefold() == CURVE_P384.casefold():
-         keyPair =   ec.generate_private_key(ec.SECP384R1())
-    elif curveName.casefold() == CURVE_P521.casefold():
-         keyPair =   ec.generate_private_key(ec.SECP521R1())
-    elif curveName.casefold() == CURVE_ED25519.casefold():
-         keyPair =   Ed25519PrivateKey.generate()
-    else:
-        print("Unsupported curve name. Supported curve names are P256, P384, P521 and Ed25519.")
+    Parameters:
+    pubKey : The public key to be serialized.
+    pubkeyFileName : The name of the file where the serialized public key will be written.
+    privKey : The private key to be serialized.
+    privkeyFileName : The name of the file where the serialized private key will be written.
+
+    Returns:
+    tuple: A tuple containing None values, as the function's main purpose is to write to files and not to return any value.
+    """
+    return serializePubKey(pubKey, pubkeyFileName), serializePrivKey(privKey, privkeyFileName)
+
+
+def serializePrivKey(privKey, privkeyFileName):
+    """
+    This function serializes a private key and writes it to a file.
+
+    Parameters:
+    privKey : The private key to be serialized.
+    privkeyFileName : The name of the file where the serialized private key will be written.
+
+    Returns:
+    None: The function's main purpose is to write to a file and not to return any value.
+    """
+    privKey_enc = privKey.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    with open(privkeyFileName, "wb") as f:
+        f.write(privKey_enc)
+        f.close()
+
+
+def serializePubKey(pubKey, pubkeyFileName):
+    """
+    This function serializes a public key and writes it to a file.
+
+    Parameters:
+    pubKey : The public key to be serialized.
+    pubkeyFileName : The name of the file where the serialized public key will be written.
+
+    Returns:
+    None: The function's main purpose is to write to a file and not to return any value.
+    """
+    pubkey_enc = pubKey.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    with open(pubkeyFileName, "wb") as f:
+        f.write(pubkey_enc)
+        f.close()
+
+    return None
+
+
+def serializeCSR(csr, csrFileName):
+    """
+    This function serializes a CSR and writes it to a file.
+
+    Parameters:
+    csr : The CSR to be serialized.
+
+    Returns:
+    None: The function's main purpose is to write to a file and not to return any value.
+    """
+    csr_enc = csr.public_bytes(
+        encoding=serialization.Encoding.PEM
+    )
+
+    with open(csrFileName, "wb") as f:
+        f.write(csr_enc)
+        f.close()
+
+    return None
+
+def deserializePrivKey(privkeyFileName):
+    """
+    This function deserializes a private key from a file.
+
+    Parameters:
+    privkeyFileName : The name of the file where the serialized private key is stored.
+
+    Returns:
+    cryptography.hazmat.primitives.asymmetric.ec : The deserialized private key.
+    """
+    with open(privkeyFileName, "rb") as f:
+        privKey = serialization.load_pem_private_key(f.read(), password=None)
+        f.close()
+
+    return privKey
+
+def sign(payload, hashAlg, privKey):
+    """
+    This function signs a message using a private key.
+
+    Parameters:
+    payload : The message to be signed.
+    hashAlg : The hash algorithm used to hash the message. Valid values are SHA256, SHA384, SHA512.
+    privKey : The private key to be used to sign the message.
+
+    Returns:
+    signature : The signature of the message. The signature is PEM encoded for results transmission. 
+    """
+
+    if isinstance(payload, str):
+        print("payload is a string")
+        payload = payload.encode()
+    else: 
+        print("payload is not a string")
+
+    # Check the signature algorithm and set the appropriate algorithm
+    if hashAlg.casefold() == HASH_SHA256.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA256())
+    elif hashAlg.casefold() == HASH_SHA384.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA384())
+    elif hashAlg.casefold() == HASH_SHA512.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA512())
+    else:   
+        print("Unsupported signature algorithm. Supported algorithms are SHA256, SHA384, SHA512.")
+        return None
+    
+    signature = privKey.sign(
+        payload,
+        hashAlg
+    )
+    return signature
+
+def verify(payload, signature, hashAlg, pubKey):
+    """
+    This function verifies a signature.
+
+    Parameters:
+    payload : The message to be verified.
+    signature : The signature to be verified. It should be PEM encoded.
+    hashAlg : he hash algorithm used to hash the message. Valid values are SHA256, SHA384, SHA512.
+    pubKey : The public key used to verify the signature.
+
+    Returns:
+    boolean : True if the signature is valid, False otherwise.
+    """
+
+    if isinstance(payload, str):
+        payload = payload.encode()
+
+    # Check the signature algorithm and set the appropriate algorithm
+    if hashAlg.casefold() == HASH_SHA256.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA256())
+    elif hashAlg.casefold() == HASH_SHA384.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA384())
+    elif hashAlg.casefold() == HASH_SHA512.casefold():
+        hashAlg = ec.ECDSA(hashes.SHA512())
+    else:   
+        print("Unsupported signature algorithm. Supported algorithms are SHA256, SHA384, SHA512.")
         return None
 
-    return keyPair
+    try:
+        pubKey.verify(
+            signature,
+            payload,
+            hashAlg
+        )
+    except InvalidSignatureError:
+        return False
+    except Exception as e: 
+        return False
+
+    return True
