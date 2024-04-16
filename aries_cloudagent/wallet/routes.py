@@ -70,8 +70,8 @@ from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyT
 from .util import EVENT_LISTENER_PATTERN
 
 # torjc01
-from .csr import create_csr, generateKeypair, serializePair, deserializePrivKey, sign, verify
-from .csr import HASH_SHA256, HASH_SHA384, HASH_SHA512
+from .ecdsa import create_csr, generateKeypair, serializePair, deserializePrivKey, sign, verify
+from .ecdsa import HASH_SHA256, HASH_SHA384, HASH_SHA512
 # from .util import bytes_to_b58
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -1621,7 +1621,7 @@ async def wallet_x509_create_csr(request: web.BaseRequest):
     print("CSR: ", csr_enc)
 
     # Add validation to other types of columns 
-    results.append({"csr": csr_enc,
+    results.append({"csr": csr_enc.replace("\n", ""),
                     "keyId": keyId, 
                     "common_name": common_name})
     return web.json_response({"results": results})
@@ -1638,11 +1638,6 @@ async def wallet_x509_get_csr(request: web.BaseRequest):
     results = []
 
     return web.json_response({"results": results})
-
-
-
-
-
 
 
 @docs(tags=["wallet"], summary="Create an ECDSA signature with a given payload")
@@ -1666,8 +1661,8 @@ async def wallet_x509_sign(request: web.BaseRequest):
         raise web.HTTPBadRequest(reason="Hash algorithm is required")
     
     if hashAlg.casefold() not in [
-        "sha256", 
-        "sha384", 
+        "sha256",
+        "sha384",
         "sha512"]:
         raise web.HTTPBadRequest(reason="Invalid hash algorithm")
 
@@ -1816,8 +1811,6 @@ async def wallet_did_csr(request: web.BaseRequest):
                 crv
             )
             
-     
-
             # Generate the CSR, encoding it in PEM format and removing the newlines
             csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, key_pair)
             csr_out = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
