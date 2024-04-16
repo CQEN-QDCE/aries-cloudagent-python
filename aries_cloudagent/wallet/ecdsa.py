@@ -122,66 +122,6 @@ def create_csr( common_name,
 
     return csr_builder
 
-"""
-def sign(payload, hashAlg, privKey):
-    
-    This function signs a message using a private key.
-
-    Parameters:
-    payload : The message to be signed.
-    hashAlg : The algorithm used to sign the message.
-    privKey : The private key used to sign the message.
-
-    Returns:
-    signature : The signature of the message.
-    
-
-    if isinstance(payload, str):
-        print("payload is a string")
-        payload = payload.encode()
-    else: 
-        print("payload is not a string")
-
-    signature = privKey.sign(
-        payload,
-        hashAlg
-    )
-    return signature
-
-"""
-
-"""
-def verify(payload, signature, hashAlg, pubKey):
-   
-    This function verifies a signature.
-
-    Parameters:
-    payload : The message to be verified.
-    signature : The signature to be verified.
-    hashAlg : The algorithm used to sign the message.
-    pubKey : The public key used to verify the signature.
-
-    Returns:
-    boolean : True if the signature is valid, False otherwise.
-
-
-    if isinstance(payload, str):
-        payload = payload.encode()
-
-    try:
-        pubKey.verify(
-            signature,
-            payload,
-            hashAlg
-        )
-    except InvalidSignatureError:
-        return False
-    except Exception as e: 
-        return False
-
-    return True
-"""
-
 
 def serializePair(pubKey, pubkeyFileName, privKey, privkeyFileName):
     """
