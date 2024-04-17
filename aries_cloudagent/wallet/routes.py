@@ -1757,7 +1757,7 @@ async def wallet_x509_verify(request: web.BaseRequest):
     
     return web.json_response({"results": results})
 
-
+"""
 @docs(tags=["wallet"], summary="Retrieve Certificate Signing Request (CSR) for a DID")
 @querystring_schema(x509CSRQueryStringSchema())
 @response_schema(DIDCSRResultScheme, 200, description="")
@@ -1826,7 +1826,7 @@ async def wallet_did_csr(request: web.BaseRequest):
 
     results.append({"did": filter_did, "method": method, "csr": csr_out.replace('\n', '') })
     return web.json_response({"results": results})
-
+"""
 
 async def register(app: web.Application):
     """Register routes."""
@@ -1844,7 +1844,7 @@ async def register(app: web.Application):
             web.post("/wallet/sd-jwt/verify", wallet_sd_jwt_verify),
             web.get("/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False),
             web.patch("/wallet/did/local/rotate-keypair", wallet_rotate_did_keypair),
-            web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
+            # web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
             web.post("/wallet/x509/keypair", wallet_x509_keypair),
             web.post("/wallet/x509/csr", wallet_x509_create_csr),
             web.get("/wallet/x509/csr", wallet_x509_get_csr, allow_head=False),
