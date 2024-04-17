@@ -59,7 +59,8 @@ from ..protocols.endorse_transaction.v1_0.util import (
 )
 from ..resolver.base import ResolverError
 from ..storage.error import StorageError, StorageNotFoundError
-from ..wallet.jwt import did_lookup_name, jwt_sign, jwt_verify
+from ..wallet.jwt import jwt_sign, jwt_verify, did_lookup_name
+from ..wallet.mdoc import mdoc_sign, mdoc_verify
 from ..wallet.sd_jwt import sd_jwt_sign, sd_jwt_verify
 from .base import BaseWallet
 from .did_info import DIDInfo
@@ -192,6 +193,10 @@ class JWSCreateSchema(OpenAPISchema):
     )
 
 
+class MdocCreateSchema(JWSCreateSchema):
+    """Request schema to create a mDOC."""
+
+
 class SDJWSCreateSchema(JWSCreateSchema):
     """Request schema to create an sd-jws with a particular DID."""
 
@@ -203,11 +208,16 @@ class SDJWSCreateSchema(JWSCreateSchema):
         )
     )
 
-
 class JWSVerifySchema(OpenAPISchema):
     """Request schema to verify a jws created from a DID."""
 
     jwt = fields.Str(validate=JWT_VALIDATE, metadata={"example": JWT_EXAMPLE})
+
+
+class MdocVerifySchema(OpenAPISchema):
+    """Request schema to verify a mDoc."""
+
+    mdoc = fields.Str(validate=None, metadata={"example": "a36776657273696f6e63312e..."})
 
 
 class SDJWSVerifySchema(OpenAPISchema):
@@ -229,6 +239,18 @@ class JWSVerifyResponseSchema(OpenAPISchema):
         required=True, metadata={"description": "Payload from verified JWT"}
     )
 
+class MdocVerifyResponseSchema(OpenAPISchema):
+    """Response schema for mDoc verification result."""
+
+    valid = fields.Bool(required=True)
+    error = fields.Str(required=False, metadata={"description": "Error text"})
+    kid = fields.Str(required=True, metadata={"description": "kid of signer"})
+    headers = fields.Dict(
+        required=True, metadata={"description": "Headers from verified mDoc."}
+    )
+    payload = fields.Dict(
+        required=True, metadata={"description": "Payload from verified mDoc"}
+    )
 
 class SDJWSVerifyResponseSchema(JWSVerifyResponseSchema):
     """Response schema for SD-JWT verification result."""
@@ -1030,6 +1052,43 @@ async def wallet_jwt_sign(request: web.BaseRequest):
 
 
 @docs(
+    tags=["wallet"],
+    summary="Creates Mdoc CBOR encoded binaries according to ISO 18013-5",
+)
+@request_schema(MdocCreateSchema)
+@response_schema(WalletModuleResponseSchema(), description="")
+async def wallet_mdoc_sign(request: web.BaseRequest):
+    """Request handler for sd-jws creation using did.
+
+    Args:
+        "headers": { ... },
+        "payload": { ... },
+        "did": "did:example:123",
+        "verificationMethod": "did:example:123#keys-1"
+        with did and verification being mutually exclusive.
+    """
+    context: AdminRequestContext = request["context"]
+    body = await request.json()
+    did = body.get("did")
+    verification_method = body.get("verificationMethod")
+    headers = body.get("headers", {})
+    payload = body.get("payload", {})
+
+    try:
+        mdoc = await mdoc_sign(
+            context.profile, headers, payload, did, verification_method
+        )
+    except ValueError as err:
+        raise web.HTTPBadRequest(reason="Bad did or verification method") from err
+    except WalletNotFoundError as err:
+        raise web.HTTPNotFound(reason=err.roll_up) from err
+    except WalletError as err:
+        raise web.HTTPBadRequest(reason=err.roll_up) from err
+
+    return web.json_response(mdoc)
+
+
+@docs(
     tags=["wallet"], summary="Create a EdDSA sd-jws using did keys with a given payload"
 )
 @request_schema(SDJWSCreateSchema)
@@ -1094,6 +1153,31 @@ async def wallet_jwt_verify(request: web.BaseRequest):
             "kid": result.kid,
         }
     )
+
+
+@docs(
+    tags=["wallet"],
+    summary="Verify a EdDSA signed Mdoc CBOR encoded binaries according to ISO 18013-5",
+)
+@request_schema(MdocVerifySchema())
+@response_schema(MdocVerifyResponseSchema(), 200, description="")
+async def wallet_mdoc_verify(request: web.BaseRequest):
+    """Request handler for mdoc validation.
+
+    Args:
+        "mdoc": { ... }
+    """
+    context: AdminRequestContext = request["context"]
+    body = await request.json()
+    mdoc = body["mdoc"]
+    try:
+        result = await mdoc_verify(context.profile, mdoc)
+    except (BadJWSHeaderError, InvalidVerificationMethod) as err:
+        raise web.HTTPBadRequest(reason=err.roll_up) from err
+    except ResolverError as err:
+        raise web.HTTPNotFound(reason=err.roll_up) from err
+
+    return web.json_response(result.serialize())
 
 
 @docs(
@@ -1840,6 +1924,8 @@ async def register(app: web.Application):
             web.post("/wallet/set-did-endpoint", wallet_set_did_endpoint),
             web.post("/wallet/jwt/sign", wallet_jwt_sign),
             web.post("/wallet/jwt/verify", wallet_jwt_verify),
+            web.post("/wallet/mdoc/sign", wallet_mdoc_sign),
+            web.post("/wallet/mdoc/verify", wallet_mdoc_verify),
             web.post("/wallet/sd-jwt/sign", wallet_sd_jwt_sign),
             web.post("/wallet/sd-jwt/verify", wallet_sd_jwt_verify),
             web.get("/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False),

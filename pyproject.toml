@@ -61,6 +61,14 @@ ursa-bbs-signatures= { version = "~1.0.1", optional = true }
 # indy
 python3-indy= { version = "^1.11.1", optional = true }
 
+# mdoc
+cbor2 = { version = "~5", optional = true } #<5.5.0,>=5.4.0
+cwt = { version = "~2", optional = true } #<2.4,>=2.3.0
+pycose = { version = "~1", optional = true } #<1.1.0,>=1.0.1
+
+#oid4vci
+oid4vci = { path = "/Users/weiiv/Workspace/di/vc/aries-acapy-plugins/oid4vci/", develop = true, optional = true }
+
 [tool.poetry.group.dev.dependencies]
 pre-commit="~3.3.3"
 # Sync with version in .pre-commit-config.yaml
@@ -96,6 +104,14 @@ bbs = [
 ]
 indy = [
      "python3-indy"
+]
+mdoc = [
+    "cbor2",
+    "cwt",
+    "pycose"
+]
+oid4vci = [
+    "oid4vci"
 ]
 
 [tool.poetry.scripts]
