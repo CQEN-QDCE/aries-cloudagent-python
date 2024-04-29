@@ -252,7 +252,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="../Aries-Workshop/" class="md-tabs__link">
           
   
   Demos
@@ -668,6 +668,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../../features/QualifiedDIDs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Qualified DIDs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../features/DIDMethods/" class="md-nav__link">
         
   
@@ -694,6 +715,27 @@
   
   <span class="md-ellipsis">
     DID Resolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/AnonCredsMethods/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries
   </span>
   
 
@@ -928,6 +970,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../Aries-Workshop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Hyperledger Aries / AnonCreds Workshop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../" class="md-nav__link">
         
   
@@ -1069,6 +1132,27 @@
   
   <span class="md-ellipsis">
     Aries Using Postman Demo
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ReusingAConnection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reusing a Connection Between Agents
   </span>
   
 
@@ -2139,7 +2223,7 @@
 <p>You can download jq releases <a href="https://github.com/stedolan/jq/releases">here</a></p>
 <h4 id="expose-services-publicly-using-ngrok">Expose services publicly using ngrok<a class="headerlink" href="#expose-services-publicly-using-ngrok" title="Permanent link">&para;</a></h4>
 <p>Note that this is <em>only required when running docker on your local machine</em>. When you run on PWD a public endpoint for your agent is exposed automatically.</p>
-<p>Since the mobile agent will need some way to communicate with the agent running on your local machine in docker, we will need to create a publicly accesible url for some services on your machine. The easiest way to do this is with <a href="https://ngrok.com/">ngrok</a>. Once ngrok is installed, create a tunnel to your local machine:</p>
+<p>Since the mobile agent will need some way to communicate with the agent running on your local machine in docker, we will need to create a publicly accessible url for some services on your machine. The easiest way to do this is with <a href="https://ngrok.com/">ngrok</a>. Once ngrok is installed, create a tunnel to your local machine:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ngrok<span class="w"> </span>http<span class="w"> </span><span class="m">8020</span>
 </code></pre></div>
 <p>This service is used for your local aca-py agent - it is the endpoint that is advertised for other Aries agents to connect to.</p>
@@ -2206,24 +2290,24 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <p>As part of its startup process, the agent will publish a revocation registry to the ledger.</p>
 <details>
     <summary>Click here to view screenshot of the revocation registry on the ledger</summary>
-    <img src="collateral/revocation-2-ledger.png" alt="Ledger">
+    <img src="../collateral/revocation-2-ledger.png" alt="Ledger">
 </details>
 
 <h2 id="accept-the-invitation">Accept the Invitation<a class="headerlink" href="#accept-the-invitation" title="Permanent link">&para;</a></h2>
 <p>When the Faber agent starts up it automatically creates an invitation and generates a QR code on the screen. On your mobile app, select "SCAN CODE" (or equivalent) and point your camera at the generated QR code. The mobile agent should automatically capture the code and ask you to confirm the connection. Confirm it.</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-1-connect-1.jpg" alt="Accept Invitation">
+    <img src="../collateral/S-1-connect-1.jpg" alt="Accept Invitation">
 </details>
 
 <p>The mobile agent will give you feedback on the connection process, something like "A connection was added to your wallet".</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-1-connect-2.jpg" alt="Add Connection to Wallet">
+    <img src="../collateral/S-1-connect-2.jpg" alt="Add Connection to Wallet">
 </details>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-1-connect-3.jpg" alt="Add Connection to Wallet">
+    <img src="../collateral/S-1-connect-3.jpg" alt="Add Connection to Wallet">
 </details>
 
 <p>Switch your browser back to Play with Docker. You should see that the connection has been established, and there is a prompt for what actions you want to take, e.g. "Issue Credential", "Send Proof Request" and so on.</p>
@@ -2239,7 +2323,7 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <p>In the Faber console, select option <code>1</code> to send a credential to the mobile agent.</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-3-credential-0.png" alt="Issue Credential">
+    <img src="../collateral/S-3-credential-0.png" alt="Issue Credential">
 </details>
 
 <p>The Faber agent outputs details to the console; e.g.,</p>
@@ -2248,20 +2332,20 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>Faber      | Credential revocation ID: 1
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>Faber      | Credential: state = done, cred_ex_id = ba3089d6-92da-4cb7-9062-7f24066b2a2a
 </code></pre></div>
-<p>The revocation registry id and credential revocation id only appear if revocation is active. If you are doing revocation, you to need the <code>Revocation registry id</code> later, so we recommend that you copy it it now and paste it into a text file or someplace that you can access later. If you don't write it down, you can get the Id from the Admin API using the <strong><code>GET /revocation/active-registry/{cred_def_id}</code></strong> endpoint, and passing in the credential definition Id (which you can get from the <strong><code>GET /credential-definitions/created</code></strong> endpoint).</p>
+<p>The revocation registry id and credential revocation id only appear if revocation is active. If you are doing revocation, you to need the <code>Revocation registry id</code> later, so we recommend that you copy it it now and paste it into a text file or some place that you can access later. If you don't write it down, you can get the Id from the Admin API using the <strong><code>GET /revocation/active-registry/{cred_def_id}</code></strong> endpoint, and passing in the credential definition Id (which you can get from the <strong><code>GET /credential-definitions/created</code></strong> endpoint).</p>
 <h3 id="accept-the-credential">Accept the Credential<a class="headerlink" href="#accept-the-credential" title="Permanent link">&para;</a></h3>
 <p>The credential offer should automatically show up in the mobile agent. Accept the offered credential following the instructions provided by the mobile agent. That will look something like this:</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-3-credential-1.jpg" alt="Credential Offer">
+    <img src="../collateral/S-3-credential-1.jpg" alt="Credential Offer">
 </details>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-3-credential-2.jpg" alt="Credential Details">
+    <img src="../collateral/S-3-credential-2.jpg" alt="Credential Details">
 </details>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-3-credential-3.jpg" alt="Credential Acceptance">
+    <img src="../collateral/S-3-credential-3.jpg" alt="Credential Acceptance">
 </details>
 
 <h2 id="issue-a-presentation-request">Issue a Presentation Request<a class="headerlink" href="#issue-a-presentation-request" title="Permanent link">&para;</a></h2>
@@ -2269,22 +2353,22 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <p>In the Faber console, select option <code>2</code> to send a proof request to the mobile agent.</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-4-proof-0.png" alt="Request Proof">
+    <img src="../collateral/S-4-proof-0.png" alt="Request Proof">
 </details>
 
 <h2 id="present-the-proof">Present the Proof<a class="headerlink" href="#present-the-proof" title="Permanent link">&para;</a></h2>
 <p>The presentation (proof) request should automatically show up in the mobile agent. Follow the instructions provided by the mobile agent to prepare and send the proof back to Faber. That will look something like this:</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-4-proof-1.jpg" alt="Proof Request Notice">
+    <img src="../collateral/S-4-proof-1.jpg" alt="Proof Request Notice">
 </details>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-4-proof-2.jpg" alt="Proof Request Details">
+    <img src="../collateral/S-4-proof-2.jpg" alt="Proof Request Details">
 </details>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-4-proof-3.jpg" alt="Proof Presentation">
+    <img src="../collateral/S-4-proof-3.jpg" alt="Proof Presentation">
 </details>
 
 <p>If the mobile agent is able to successfully prepare and send the proof, you can go back to the Play with Docker terminal to see the status of the proof.</p>
@@ -2293,7 +2377,7 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <p>In the Faber console window, the proof should be received as validated.</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/S-4-proof-4.png" alt="Proof Validation">
+    <img src="../collateral/S-4-proof-4.png" alt="Proof Validation">
 </details>
 
 <h2 id="revoke-the-credential-and-send-another-proof-request">Revoke the Credential and Send Another Proof Request<a class="headerlink" href="#revoke-the-credential-and-send-another-proof-request" title="Permanent link">&para;</a></h2>
@@ -2301,7 +2385,7 @@ clone of Aries Cloud Agent Python and run the following:</p>
 <p>Once that is done, try sending another proof request and see what happens! Experiment with immediate and pending publication. Note that immediate publication also publishes any pending revocations on its revocation registry.</p>
 <details>
     <summary>Click here to view screenshot</summary>
-    <img src="collateral/revocation-3-console.png" alt="Revocation">
+    <img src="../collateral/revocation-3-console.png" alt="Revocation">
 </details>
 
 <h2 id="send-a-connectionless-proof-request">Send a Connectionless Proof Request<a class="headerlink" href="#send-a-connectionless-proof-request" title="Permanent link">&para;</a></h2>

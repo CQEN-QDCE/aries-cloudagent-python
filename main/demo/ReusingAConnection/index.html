@@ -9,6 +9,10 @@
       
       
       
+        <link rel="prev" href="../AriesPostmanDemo/">
+      
+      
+        <link rel="next" href="../../gettingStarted/">
       
       
       <link rel="icon" href="https://raw.githubusercontent.com/hyperledger/aries-cloudagent-python/main/docs/assets/aries-favicon.png">
@@ -16,7 +20,7 @@
     
     
       
-        <title>Reusing a Connection - Hyperledger Aries ACA-Py Docs</title>
+        <title>Reusing a Connection Between Agents - Hyperledger Aries ACA-Py Docs</title>
       
     
     
@@ -107,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reusing a Connection
+              Reusing a Connection Between Agents
             
           </span>
         </div>
@@ -242,11 +246,13 @@
         
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../Aries-Workshop/" class="md-tabs__link">
           
   
   Demos
@@ -662,6 +668,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../../features/QualifiedDIDs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Qualified DIDs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../features/DIDMethods/" class="md-nav__link">
         
   
@@ -688,6 +715,27 @@
   
   <span class="md-ellipsis">
     DID Resolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/AnonCredsMethods/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries
   </span>
   
 
@@ -876,25 +924,28 @@
       
   
   
+    
   
   
+  
     
     
     
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
       
         
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   <span class="md-ellipsis">
@@ -905,12 +956,33 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Demos
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Aries-Workshop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Hyperledger Aries / AnonCreds Workshop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1054,6 +1126,37 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Reusing a Connection Between Agents
+  </span>
+  
+
+      </a>
+      
     </li>
   
 
@@ -2143,36 +2246,30 @@ item of the Out of Band invitation. As noted in the Out of Band specification,
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ]
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>}
 </code></pre></div>
-<p>The use of conenction reuse can be demonstrated with the Alice / Faber demos as
+<p>The use of connection reuse can be demonstrated with the Alice / Faber demos as
 follows. We assume you have already somewhat familiar with your options for
 running the <a href="../">Alice Faber Demo</a> (e.g. locally or in a browser). Follow those
 instruction up to the point where you are about to start the Faber and Alice agents.</p>
 <ol>
 <li>On a command line, run Faber with these parameters: <code>./run_demo faber
-   --reuse-connection --events</code>.</li>
+   --reuse-connections --public-did-connections --events</code>.</li>
 <li>On a second command line, run Alice as normal, perhaps with the <code>events</code>
-   option: <code>./run_demo alice --events</code></li>
+   option: <code>./run_demo alice --reuse-connections --events</code></li>
 <li>Copy the invitation from the Faber terminal and paste it into the Alice
    terminal at the prompt.</li>
 <li>Verify that the connection was established.</li>
 <li>If you want, go to the Alice OpenAPI screen (port <code>8031</code>, path
       <code>api/docs</code>), and then use the <code>GET Connections</code> to see that Alice has one
       connection to Faber.</li>
+<li>In the Faber terminal, type <code>4</code> to get a prompt for a new connection. This
+   will generate a new invitation with the same public DID.</li>
 <li>In the Alice terminal, type <code>4</code> to get a prompt for a new connection, and
-   paste the same invitation as in Step 3 (above).</li>
+   paste the new invitation.</li>
 <li>Note from the webhook events in the Faber terminal that the <code>reuse</code> message
    is received from Alice, and as a result, no new connection was created.</li>
 <li>Execute again the <code>GET Connections</code> endpoint on the Alice OpenAPI screen
       to confirm that there is still just one established connection.</li>
-<li>In the Faber terminal, type <code>4</code> to get a new invitation, copy the invitation,
-   in the Alice terminal, type <code>4</code> to get prompted for an invitation, and paste
-   in the new invitation from Faber. Again, the <code>reuse</code> webhook event will be
-   visible in the Faber terminal.</li>
-<li>Execute again the <code>GET Connections</code> endpoint on the Alice OpenAPI screen
-      to confirm that there is still just one established connection.</li>
-<li>Notice that in the invitations in Step 3 and 7 both have the same DID in
-      the <code>services</code>.</li>
-<li>Try running the demo again <strong>without</strong> the <code>--reuse-connection</code> parameter and
+<li>Try running the demo again <strong>without</strong> the <code>--reuse-connections</code> parameter and
    compare the <code>services</code> value in the new invitation vs. what was generated in
    Steps 3 and 7. It is not a DID, but rather a one time use, inline DIDDoc
    item.</li>
@@ -2182,9 +2279,15 @@ issuer (and uses in creating the schema and Cred Def for the demo), Faber could
 use any <em>resolvable</em> (not inline) DID, including DID Peer types 2 or 4 DIDs, as
 long as the DID is the same in every invitation. It is the fact that the DID is
 always the same that tells the invitee that they can reuse an existing connection.</p>
-<p>Note that the invitation does <strong>NOT</strong> have to be a multi-use invitation for
-reuse to be useful, as long as the other requirements (at the top of this
-document) are met.</p>
+<p>For example, to run faber with connection reuse using a non-public DID:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./run_demo<span class="w"> </span>faber<span class="w"> </span>--reuse-connections<span class="w"> </span>--events
+</code></pre></div>
+<p>To run faber using a <code>did:peer</code> and reusable connections:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./run_demo<span class="w"> </span>faber<span class="w"> </span>--reuse-connections<span class="w"> </span>--emit-did-peer-2<span class="w"> </span>--events
+</code></pre></div>
+<p>To run this demo using a multi-use invitation (from Faber):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./run_demo<span class="w"> </span>faber<span class="w"> </span>--reuse-connections<span class="w"> </span>--emit-did-peer-2<span class="w"> </span>--multi-use-invitations<span class="w"> </span>--events
+</code></pre></div>
 
 
 
@@ -2215,6 +2318,44 @@ document) are met.</p>
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../AriesPostmanDemo/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Aries Using Postman Demo">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Aries Using Postman Demo
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../gettingStarted/" class="md-footer__link md-footer__link--next" aria-label="Next: Becoming an Indy/Aries Developer">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Becoming an Indy/Aries Developer
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">

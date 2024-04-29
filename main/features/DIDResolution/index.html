@@ -12,7 +12,7 @@
         <link rel="prev" href="../DIDMethods/">
       
       
-        <link rel="next" href="../Multiledger/">
+        <link rel="next" href="../AnonCredsMethods/">
       
       
       <link rel="icon" href="https://raw.githubusercontent.com/hyperledger/aries-cloudagent-python/main/docs/assets/aries-favicon.png">
@@ -252,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../demo/" class="md-tabs__link">
+        <a href="../../demo/Aries-Workshop/" class="md-tabs__link">
           
   
   Demos
@@ -671,6 +671,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../QualifiedDIDs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Qualified DIDs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../DIDMethods/" class="md-nav__link">
         
   
@@ -825,6 +846,27 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AnonCredsMethods/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1052,6 +1094,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../../demo/Aries-Workshop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Hyperledger Aries / AnonCreds Workshop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../demo/" class="md-nav__link">
         
   
@@ -1183,6 +1246,27 @@
   
   <span class="md-ellipsis">
     Aries Using Postman Demo
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demo/ReusingAConnection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reusing a Connection Between Agents
   </span>
   
 
@@ -2430,7 +2514,7 @@ from ..resolver.did_resolver import DIDResolver</p>
 </code></pre></div>
 <p>The following is a fully functional Dockerfile encapsulating this setup:</p>
 <p>```dockerfile=
-FROM ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.0rc1
+FROM ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.1rc1
 RUN pip3 install git+<a href="https://github.com/dbluhm/acapy-resolver-github">https://github.com/dbluhm/acapy-resolver-github</a></p>
 <p>CMD ["aca-py", "start", "-it", "http", "0.0.0.0", "3000", "-ot", "http", "-e", "<a href="http://localhost:3000">http://localhost:3000</a>", "--admin", "0.0.0.0", "3001", "--admin-insecure-mode", "--no-ledger", "--plugin", "acapy_resolver_github"]
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>To use the above dockerfile:
@@ -2500,13 +2584,13 @@ RUN pip3 install git+<a href="https://github.com/dbluhm/acapy-resolver-github">h
         
         
           
-          <a href="../Multiledger/" class="md-footer__link md-footer__link--next" aria-label="Next: Configuring Multiple Indy Ledgers">
+          <a href="../AnonCredsMethods/" class="md-footer__link md-footer__link--next" aria-label="Next: Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Configuring Multiple Indy Ledgers
+                Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries
               </div>
             </div>
             <div class="md-footer__button md-icon">

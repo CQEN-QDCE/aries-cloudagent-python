@@ -250,7 +250,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../demo/" class="md-tabs__link">
+        <a href="../demo/Aries-Workshop/" class="md-tabs__link">
           
   
   Demos
@@ -668,6 +668,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../features/QualifiedDIDs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Qualified DIDs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../features/DIDMethods/" class="md-nav__link">
         
   
@@ -694,6 +715,27 @@
   
   <span class="md-ellipsis">
     DID Resolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/AnonCredsMethods/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Publishing AnonCreds Objects To Other Ledgers/Verifiable Data Registries
   </span>
   
 
@@ -925,6 +967,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../demo/Aries-Workshop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Hyperledger Aries / AnonCreds Workshop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../demo/" class="md-nav__link">
         
   
@@ -1056,6 +1119,27 @@
   
   <span class="md-ellipsis">
     Aries Using Postman Demo
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demo/ReusingAConnection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reusing a Connection Between Agents
   </span>
   
 
@@ -2179,7 +2263,7 @@ sure that ChatGPT isn't messing with you and you have the needed data.</p>
 </li>
 <li>
 <p>Update the ReadTheDocs in the <code>/docs</code> folder by following the instructions in
-   the <code>./README.md</code> file. That will likely add a number of new and modified
+   the <code>./UpdateRTD.md</code> file. That will likely add a number of new and modified
    files to the PR. Eliminate all of the errors in the generation process,
    either by mocking external dependencies or by fixing ACA-Py code. If
    necessary, create an issue with the errors and assign it to the appropriate
@@ -2188,11 +2272,12 @@ sure that ChatGPT isn't messing with you and you have the needed data.</p>
 </li>
 <li>
 <p>Search across the repository for the previous version number and update it
-   everywhere that makes sense. The CHANGELOG.md is a likely exception, and the
-   <code>pyproject.toml</code> in the root is <strong>MUST</strong>. You can skip (although it won't
-   hurt) to update the files in the <code>open-api</code> folder as they will be
-   automagically updated by the next step in publishing. The incremented version
-   number <strong>MUST</strong> adhere to the <a href="https://semver.org/#semantic-versioning-specification-semver">Semantic Versioning
+   everywhere that makes sense. The CHANGELOG.md entry for the previous release
+   is a likely exception, and the <code>pyproject.toml</code> in the root <strong>MUST</strong> be
+   updated. You can skip (although it won't hurt) to update the files in the
+   <code>open-api</code> folder as they will be automagically updated by the next step in
+   publishing. The incremented version number <strong>MUST</strong> adhere to the <a href="https://semver.org/#semantic-versioning-specification-semver">Semantic
+   Versioning
    Specification</a>
    based on the changes since the last published release. For Release
    Candidates, the form of the tag is "0.11.0rc2". As of release <code>0.11.0</code> we
@@ -2201,8 +2286,11 @@ sure that ChatGPT isn't messing with you and you have the needed data.</p>
 </li>
 <li>
 <p>Regenerate openapi.json and swagger.json by running
-   <code>./scripts/generate-open-api-spec</code>.</p>
+   <code>../scripts/generate-open-api-spec</code> from within the <code>aries_cloudagent</code> folder.</p>
 </li>
+</ul>
+<p>Command: <code>cd aries_cloudagent;../scripts/generate-open-api-spec;cd ..</code></p>
+<ol>
 <li>
 <p>Double check all of these steps above, and then submit a PR from the branch.
    Add this new PR to CHANGELOG.md so that all the PRs are included.
@@ -2228,7 +2316,7 @@ sure that ChatGPT isn't messing with you and you have the needed data.</p>
    and a link to the packages added to the repositories main page (under
    "Packages").</p>
 </li>
-</ul>
+</ol>
 <p>Additional information about the container image publication process can be
    found in the document <a href="../deploying/ContainerImagesAndGithubActions/">Container Images and Github Actions</a>.</p>
 <ol>
