@@ -1,7 +1,9 @@
 """Wallet admin routes."""
 
+import base64
 import json
 import logging
+import os
 from typing import List, Optional, Tuple, Union
 
 from aiohttp import web
@@ -9,6 +11,7 @@ from aiohttp_apispec import docs, querystring_schema, request_schema, response_s
 from marshmallow import fields, validate
 
 from aries_cloudagent.connections.base_manager import BaseConnectionManager
+
 
 from ..admin.request_context import AdminRequestContext
 from ..config.injection_context import InjectionContext
@@ -41,6 +44,10 @@ from ..messaging.valid import (
     NON_SD_LIST_VALIDATE,
     SD_JWT_EXAMPLE,
     SD_JWT_VALIDATE,
+    NON_SD_LIST_EXAMPLE,
+    NON_SD_LIST_VALIDATE,
+    CSR_EXAMPLE,
+    CSR_VALIDATE,
     IndyDID,
     StrOrDictField,
     Uri,
@@ -56,15 +63,23 @@ from ..protocols.endorse_transaction.v1_0.util import (
 )
 from ..resolver.base import ResolverError
 from ..storage.error import StorageError, StorageNotFoundError
-from ..wallet.jwt import jwt_sign, jwt_verify
+from ..wallet.jwt import jwt_sign, jwt_verify, did_lookup_name
 from ..wallet.sd_jwt import sd_jwt_sign, sd_jwt_verify
 from .base import BaseWallet
 from .did_info import DIDInfo
 from .did_method import KEY, PEER2, PEER4, SOV, DIDMethod, DIDMethods, HolderDefinedDid
 from .did_posture import DIDPosture
 from .error import WalletError, WalletNotFoundError
-from .key_type import BLS12381G2, ED25519, KeyTypes
+from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyTypes
 from .util import EVENT_LISTENER_PATTERN
+
+# torjc01
+from .ecdsa import generateKeypair, serializePair, deserializePrivKey, keyFingerprint, convertKey
+from .x509 import create_csr, serializeCSR, sign, verify
+from .ecdsa import HASH_SHA256, HASH_SHA384, HASH_SHA512, SIGNING_ALGORITHMS, CURVE_P256, CURVE_P384, CURVE_P521
+# from .util import bytes_to_b58
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 LOGGER = logging.getLogger(__name__)
 
@@ -318,13 +333,17 @@ class DIDQueryStringSchema(OpenAPISchema):
         metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
     )
 
-
+# torjc01
 class DIDCreateOptionsSchema(OpenAPISchema):
     """Parameters and validators for create DID options."""
 
     key_type = fields.Str(
         required=True,
-        validate=validate.OneOf([ED25519.key_type, BLS12381G2.key_type]),
+        validate=validate.OneOf([ED25519.key_type, 
+                                 BLS12381G2.key_type, 
+                                 ECDSAP256.key_type, 
+                                 ECDSAP384.key_type, 
+                                 ECDSAP521.key_type]),
         metadata={
             "example": ED25519.key_type,
             "description": (
@@ -1314,6 +1333,600 @@ async def on_register_nym_event(profile: Profile, event: Event):
                     did,
                 )
 
+# ===========================================================================================================
+# =========================================torjc01===========================================================
+# ===========================================================================================================
+
+# torjc01
+class DIDCSRScheme(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    method = fields.Str(
+        required=True,
+        metadata={
+            "description": "Did method associated with the DID",
+            "example": KEY.method_name,
+        },
+    )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+    country = fields.Str(
+        required=False,
+        metadata={"description": "Country for the CSR", "example": "CA"},
+    )   
+    state = fields.Str( 
+        required=False,
+        metadata={"description": "State for the CSR", "example": "Quebec"},
+    )
+    city = fields.Str(
+        required=False,
+        metadata={"description": "City for the CSR", "example": "Quebec"},
+    )
+    organization = fields.Str(
+        required=False,
+        metadata={"description": "Organization for the CSR", "example": "Hyperledger"},
+    )
+    organizational_unit = fields.Str(
+        required=False,
+        metadata={"description": "Organizational unit for the CSR", "example": "Hyperledger PKI Authority"},
+    )
+    email = fields.Str(
+        required=False,
+        metadata={"description": "Email for the CSR", "example": "owner@hyperledger.com"},
+    )
+    csr = fields.Str(
+        required=True,
+        metadata={"description": "CSR generated", "example": CSR_EXAMPLE},
+    )
+    
+# torjc01
+class DIDx509Scheme(OpenAPISchema):
+    csr = fields.Str(
+        required=True,
+        validate=CSR_VALIDATE,
+        metadata={"description": "Generated CSR ready to send to the PKI", "example": CSR_EXAMPLE},
+    )
+    did = fields.Str(
+        required=False,
+        metadata={
+            "description": "The DID identifier", 
+            "example": GENERIC_DID_EXAMPLE,
+        },
+    )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+
+# torjc01 
+class DIDCSRResultScheme(OpenAPISchema):
+    result = fields.Nested(DIDCSRScheme())
+
+# torjc01 
+class DIDx509ResultScheme(OpenAPISchema):
+    result = fields.Nested(DIDx509Scheme())
+
+class x509KeypairSchema(OpenAPISchema):
+    controllerURL = fields.Str(
+        required=True,
+        metadata={
+            "description": "Domain address of the controller of the key", 
+            "example": "exemple.com",
+        },
+    )
+    did = fields.Str(
+        required=True,
+        metadata={
+            "description": "DID web of the keypair", 
+            "example": "did:web:exemple.com#ab2341be",
+        },
+    )
+    keyType = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
+    keyId = fields.Str(
+        required=False,
+        metadata={
+            "description": "The key identifier", 
+            "example": "6f17d22bba15001f",
+        },
+    )
+    
+class x509KeypairRequestSchema(OpenAPISchema):
+
+    controllerURL = fields.Str(
+        required=True,
+        metadata={
+            "description": "Domain address of the controller of the key", 
+            "example": "example.com",
+        },
+    )
+    keyType = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
+
+class x509KeypairResultSchema(OpenAPISchema):
+    result = fields.Nested(x509KeypairSchema())
+
+
+class X509DummyQueryStringSchema(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+
+class x509CSRResultScheme(OpenAPISchema):
+
+    did = fields.Str(
+        required=True,
+        validate=GENERIC_DID_VALIDATE,
+        metadata={"description": "DID of interest", "example": GENERIC_DID_EXAMPLE},
+    )
+    key_type = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+    country = fields.Str(
+        required=False,
+        metadata={"description": "Country for the CSR", "example": "CA"},
+    )
+    state = fields.Str(
+        required=False,
+        metadata={"description": "State for the CSR", "example": "Quebec"},
+    )
+    city = fields.Str(
+        required=False,
+        metadata={"description": "City for the CSR", "example": "Quebec"},
+    )
+    organization = fields.Str(
+        required=False,
+        metadata={"description": "Organization for the CSR", "example": "Hyperledger"},
+    )
+    organizational_unit = fields.Str(
+        required=False,
+        metadata={"description": "Organizational unit for the CSR", "example": "Hyperledger PKI Authority"},
+    )
+    email = fields.Str(
+        required=False,
+        metadata={"description": "Email for the CSR", "example": ""},
+    )
+
+class x509CSRQueryStringSchema(OpenAPISchema):
+    
+    did = fields.Str(
+        validate=GENERIC_DID_VALIDATE,
+        required=True,
+        metadata={"example": GENERIC_DID_EXAMPLE, "description": "DID for the CSR"},
+    )
+    key_type = fields.Str(
+        required=True,
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
+    )
+    common_name = fields.Str(
+        required=True,
+        metadata={"description": "Common name for the CSR", "example": "Certificate owner"},
+    )
+    country = fields.Str(
+        required=True,
+        metadata={"description": "Country for the CSR", "example": "CA"},
+    )
+    state = fields.Str(
+        required=False,
+        metadata={"description": "State for the CSR", "example": "Quebec"},
+    )
+    city = fields.Str(
+        required=False,
+        metadata={"description": "City for the CSR", "example": "Quebec"},
+    )
+    organization = fields.Str(
+        required=False,
+        metadata={"description": "Organization for the CSR", "example": "Hyperledger"},
+    )
+    organizational_unit = fields.Str(
+        required=False,
+        metadata={"description": "Organizational unit for the CSR", "example": "Hyperledger PKI Authority"},
+    )
+    email = fields.Str(
+        required=False,
+        metadata={"description": "Email for the CSR", "example": ""},
+    )
+
+class x509SignQueryStringSchema(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        metadata={"example": GENERIC_DID_EXAMPLE, "description": "DID."},
+    )
+    hashAlg = fields.Str(
+        required=True,
+        # validate=validate.OneOf([HASH_SHA256, HASH_SHA384, HASH_SHA512]),
+        metadata={"example": "SHA256", "description": "Hashing algorithm to use in signing and verification."},
+    )
+    payload = fields.Raw(required=True)
+
+class x509VerifyQueryStringSchema(OpenAPISchema):
+    did = fields.Str(
+        required=True,
+        metadata={"example": GENERIC_DID_EXAMPLE, "description": "DID of the keypair used to verification."},
+    )
+    hashAlg = fields.Str(
+        required=True,
+        # validate=validate.OneOf([HASH_SHA256, HASH_SHA384, HASH_SHA512]),
+        metadata={"example": "SHA256", "description": "Hashing algorithm to use in signing and verification."},
+    )
+    payload = fields.Raw(required=True)
+    signature = fields.Str(
+        required=True,
+        metadata={"example": "MGUCMQDyg+s3e4W/jzODrUCm501OdumSwdfy+bmOOFRTpmD1sVJnAMjHuoJVRHS9KPNZwpMCMEwKfnqJSkzlF45CHMrMCVDXIYaZpCijZQ6WwyFeCHJbtNg/GyR9Oys8vLBpiVkcIQ==", 
+                  "description": "The signature generated by the private key for the payload in input."},
+    )
+
+
+
+#  *************************************
+#  *************************************
+#  *************************************
+#  *************************************
+
+@docs(tags=["wallet"], summary="Create a keypair for a x509 certificate")
+@request_schema(x509KeypairRequestSchema())
+@response_schema(x509KeypairResultSchema, 200, description="")
+async def wallet_x509_keypair(request: web.BaseRequest):
+
+    context: AdminRequestContext = request["context"]
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+        raise web.HTTPBadRequest(reason="Invalid JSON in request body")
+
+    # Initialize variables
+    keyId = None
+    keypair = None
+    keyType = body.get("keyType")
+    controllerURL = body.get("controllerURL")
+    results = []
+    
+    # Validate input 
+    if keyType is None:
+        raise web.HTTPBadRequest(reason="Key type is required")
+    
+    if keyType == ED25519.key_type:
+        raise web.HTTPBadRequest(reason="Ed25519 is not supported")
+    
+    if keyType.casefold() not in [
+        "p256", 
+        "p384", 
+        "p521"]:
+        raise web.HTTPBadRequest(reason="Invalid key type")
+
+    # Generate the keypair
+    keypair = generateKeypair(keyType)
+
+    if keypair is None:
+        raise web.HTTPBadRequest(reason="Error generating keypair")
+    
+    # Generate the did:web identificator and write up the did document
+    keyId = "#" + keyFingerprint(keypair.public_key())
+    did = "did:web"+":"+controllerURL
+    document = {
+        "id": did,
+        "verificationMethod": [
+            {
+                "id": f"{did}{keyId}",
+                "type": "x509ECDSAKey",
+                "controller": did,
+                "publicKey": convertKey(
+                    keypair.public_key(),
+                    kid=keyId,
+                    alg=SIGNING_ALGORITHMS[keypair.public_key().key_size],
+                ),
+            }
+        ],
+    }
+
+    with open(f"{did}{keyId}.json", "w") as f:
+        json.dump(document, f, indent=2)
+
+    # Serialize the keypair
+    serializePair(keypair.public_key(), 
+                  f"{did}{keyId}"+"-pub.key", 
+                  keypair, 
+                  f"{did}{keyId}"+"-priv.key")
+
+    
+    # Return the keypair
+    results.append({"controllerURL": controllerURL,
+                    "did": f"{did}{keyId}",
+                    "keyId": keyId, 
+                    "keyType": keyType})
+    
+    return web.json_response({"results": results})
+
+
+
+@docs(tags=["wallet"], summary="Create a Certificate Signing Request (CSR) for a x509 certificate")
+@querystring_schema(x509CSRQueryStringSchema())
+@response_schema(DIDx509ResultScheme, 200, description="")
+async def wallet_x509_create_csr(request: web.BaseRequest):
+    
+    context: AdminRequestContext = request["context"]
+
+    results = []
+
+     # Retrieve parameters
+    did = request.query.get("did")
+    common_name = request.query.get("common_name")
+    country = request.query.get("country")
+    key_type = request.query.get("key_type")
+    city = request.query.get("city")
+    email = request.query.get("email")
+    organization = request.query.get("organization")
+    organizational_unit = request.query.get("organizational_unit")
+    state = request.query.get("state")
+
+    if not did:
+        raise web.HTTPBadRequest(reason="DID identifier is required")
+
+    if not common_name:
+        raise web.HTTPBadRequest(reason="Common name is required")
+    
+    if not country:
+        raise web.HTTPBadRequest(reason="Country is required")
+    
+    if not key_type:
+        raise web.HTTPBadRequest(reason="Key type is required")
+    
+    if key_type.casefold() not in [
+        "p256", 
+        "p384", 
+        "p521", 
+        "ed25519"]:
+
+        raise web.HTTPBadRequest(reason="Invalid key type")
+    
+    # Deserialize the private key
+
+    keyfile = did +"-priv.key"
+
+    if not os.path.exists(keyfile):
+        raise web.HTTPBadRequest(reason="Key file not found; check the DID parameter")
+    
+    keypair = deserializePrivKey(keyfile) 
+
+    if not keypair:
+        raise web.HTTPBadRequest(reason="Error deserializing keypair")
+
+    csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, keypair) 
+
+    csr_enc = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+    print("CSR: ", csr_enc)
+
+    # Add validation to other types of columns 
+    results.append({"csr": csr_enc.replace("\n", ""),
+                    "did": did, 
+                    "common_name": common_name})
+    return web.json_response({"results": results})
+
+
+@docs(tags=["wallet"], summary="Fetch an existing Certificate Signing Request (CSR) linked to a keypair")
+@querystring_schema(X509DummyQueryStringSchema())
+@response_schema(x509CSRQueryStringSchema, 200, description="")
+async def wallet_x509_get_csr(request: web.BaseRequest):
+    
+    context: AdminRequestContext = request["context"]
+
+    # profile = context.profile
+
+    results = []
+
+    return web.json_response({"results": results})
+
+
+@docs(tags=["wallet"], summary="Create an ECDSA signature with a given payload")
+@querystring_schema(x509SignQueryStringSchema())
+@response_schema(DIDx509ResultScheme, 200, description="")
+async def wallet_x509_sign(request: web.BaseRequest):
+    
+    context: AdminRequestContext = request["context"]
+    results = []
+
+    # Retrieve parameters
+    did = request.query.get("did")
+    hashAlg = request.query.get("hashAlg")
+    payload = request.query.get("payload")
+
+
+    if not did:
+        raise web.HTTPBadRequest(reason="DID identifier is required")
+    
+    if not hashAlg:
+        raise web.HTTPBadRequest(reason="Hash algorithm is required")
+    
+    if hashAlg.casefold() not in [
+        "sha256",
+        "sha384",
+        "sha512"]:
+        raise web.HTTPBadRequest(reason="Invalid hash algorithm")
+
+    if not payload:
+        raise web.HTTPBadRequest(reason="Payload is required")
+    
+    if isinstance(payload, str):
+        payload = payload.encode()
+
+    # Deserialize the private key
+    keypair = did+"-priv.key"
+
+    if not os.path.exists(keypair):
+        raise web.HTTPBadRequest(reason="Key file not found; check the keyId parameter")
+    
+    keypair = deserializePrivKey(keypair)
+
+    if not keypair:
+        raise web.HTTPBadRequest(reason="Error deserializing keypair")
+    
+    # Sign the payload
+    signature = sign(payload, hashAlg, keypair)
+
+    signature_enc = base64.b64encode(signature).decode("utf-8")
+
+    results.append({"result": "success", 
+                    "did": did, 
+                    "hashAlg": hashAlg,
+                    "signature": signature_enc})
+    
+    return web.json_response({"results": results})
+
+
+@docs(tags=["wallet"], summary="Verify a signature with a a given payload")
+@querystring_schema(x509VerifyQueryStringSchema())
+@response_schema(DIDx509ResultScheme, 200, description="")
+async def wallet_x509_verify(request: web.BaseRequest):
+
+    context: AdminRequestContext = request["context"]
+    results = []
+
+    # Retrieve parameters
+    did = request.query.get("did")
+    hashAlg = request.query.get("hashAlg")
+    payload = request.query.get("payload")
+    signature = request.query.get("signature")
+
+    if not did:
+        raise web.HTTPBadRequest(reason="Key identifier is required")
+    
+    if not hashAlg:
+        raise web.HTTPBadRequest(reason="Hash algorithm is required")
+    
+    if hashAlg.casefold() not in [
+        "sha256", 
+        "sha384", 
+        "sha512"]:
+        raise web.HTTPBadRequest(reason="Invalid hash algorithm")
+
+    if not payload:
+        raise web.HTTPBadRequest(reason="Payload is required")
+    
+    if not signature:
+        raise web.HTTPBadRequest(reason="Signature is required")
+    
+    if isinstance(payload, str):
+        payload = payload.encode()
+
+    if isinstance(signature, str):
+        signature = base64.b64decode(signature)
+
+
+    # Deserialize the private key
+    keypair = did+"-priv.key"
+
+    if not os.path.exists(keypair):
+        raise web.HTTPBadRequest(reason="Key file not found; check the keyId parameter")
+    
+    pubkey = deserializePrivKey(keypair).public_key()
+
+    if not pubkey:
+        raise web.HTTPBadRequest(reason="Error deserializing the public key")
+
+
+    # Verify the signature
+    verified = verify(payload, signature, hashAlg, pubkey)
+
+    results.append({"result": "success",
+                    "did": did, 
+                    "hashAlg": hashAlg,
+                    "verified": verified})
+    
+    return web.json_response({"results": results})
+
+"""
+@docs(tags=["wallet"], summary="Retrieve Certificate Signing Request (CSR) for a DID")
+@querystring_schema(x509CSRQueryStringSchema())
+@response_schema(DIDCSRResultScheme, 200, description="")
+async def wallet_did_csr(request: web.BaseRequest):
+    
+    context: AdminRequestContext = request["context"]
+
+    profile = context.profile
+    
+    # Retrieve parameters 
+    filter_did = request.query.get("did")
+    method = request.query.get("method") if request.query.get("method") is not None else "key"
+    common_name = filter_did
+    country = request.query.get("country")
+    state = request.query.get("state")
+    city = request.query.get("city")
+    organization = request.query.get("organization")
+    organizational_unit = request.query.get("organizational_unit")
+    email = request.query.get("email")
+    
+    results = []
+
+    async with profile.session() as session:
+        wallet = session.inject_or(BaseWallet)
+        if not wallet:
+            raise web.HTTPForbidden(reason="No wallet available")
+        try:
+            # Load the private key encoded in the wallet and derive the private key for use with Cryptography library
+            did_info = await wallet.get_local_did(did_lookup_name(filter_did))
+            key_pair = await wallet._session.handle.fetch_key(did_info.verkey)
+            jwt_bytes = key_pair.key.get_jwk_secret()
+            json_web_key = json.loads(jwt_bytes.decode())
+
+            crv = None
+            match json_web_key['crv']:
+                case "P-256":
+                    crv = ec.SECP256R1()
+                case "P-384":
+                    crv = ec.SECP384R1()
+                case "P-521":
+                    crv = ec.SECP521R1()
+                case "Ed25519":
+                    print("Ed25519: add support to this curve type")
+                    crv = ec.Ed25519()
+                case _:
+                    raise web.HTTPBadRequest(reason="Unsupported curve type")
+                
+            # https://stackoverflow.com/questions/2941995/python-ignore-incorrect-padding-error-when-base64-decoding
+            privateKey_bytes = ec.derive_private_key(
+                int.from_bytes(base64.urlsafe_b64decode(json_web_key['d'] + '=='), "big"),
+                crv
+            )
+            
+            # Generate the CSR, encoding it in PEM format and removing the newlines
+            csr = create_csr(common_name, country, state, city, organization, organizational_unit, email, key_pair)
+            csr_out = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+           
+            # Write the CSR to a temp file           
+            with open(filter_did + ".csr", "w") as f:
+                f.write(csr_out)
+                f.close()
+
+
+        except WalletError as err:
+            raise web.HTTPBadRequest(reason=err.roll_up) from err
+
+    results.append({"did": filter_did, "method": method, "csr": csr_out.replace('\n', '') })
+    return web.json_response({"results": results})
+"""
 
 async def register(app: web.Application):
     """Register routes."""
@@ -1333,6 +1946,12 @@ async def register(app: web.Application):
                 "/wallet/get-did-endpoint", wallet_get_did_endpoint, allow_head=False
             ),
             web.patch("/wallet/did/local/rotate-keypair", wallet_rotate_did_keypair),
+            # web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
+            web.post("/wallet/x509/keypair", wallet_x509_keypair),
+            web.post("/wallet/x509/csr", wallet_x509_create_csr),
+            web.get("/wallet/x509/csr", wallet_x509_get_csr, allow_head=False),
+            web.post("/wallet/x509/sign", wallet_x509_sign),
+            web.post("/wallet/x509/verify", wallet_x509_verify),
         ]
     )
 

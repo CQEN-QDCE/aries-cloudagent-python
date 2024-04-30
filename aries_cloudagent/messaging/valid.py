@@ -885,6 +885,20 @@ class IndyOrKeyDID(Regexp):
             error="Value {input} is not in did:key or indy did format",
         )
 
+# torjc01
+class CSR(Regexp):
+    """Validate value against Certificate Signing Request (CSR) format."""
+
+    EXAMPLE = "-----BEGIN CERTIFICATE REQUEST-----\nMIICyjCCAbICAQAwgYkxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTEQMA4GA1UEBwwHVW5rbm93bjEQMA4GA1UECgwHU3VwZXJ2aWV3MQ4wDAYDVQQLDAVJbmRpYTEPMA0GA1UEAwwGc3VwZXJ2MB4XDTE5MTIyNzE5MzYwMloXDTI5MTIyNTE5MzYwMlowgYkxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTEQMA4GA1UEBwwHVW5rbm93bjEQMA4GA1UECgwHU3VwZXJ2aWV3MQ4wDAYDVQQLDAVJbmRpYTEPMA0GA1UEAwwGc3VwZXJ2MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw7v9VzG3VfXG3Xl0cZK4z6Djz2JXJz3J1Y0z9t8t6X5Yt4vD9E9h5X-----END CERTIFICATE REQUEST-----" 
+
+    PATTERN = r"-----BEGIN CERTIFICATE REQUEST-----.*-----END CERTIFICATE REQUEST-----"
+
+    def __init__(self):
+        """Initialize the instance."""
+        super().__init__(
+            CSR.PATTERN,
+            error="Value {input} is not in valid Certificate Signing Request (CSR) format",
+        )
 
 # Instances for marshmallow schema specification
 INT_EPOCH_VALIDATE = IntEpoch()
@@ -1021,3 +1035,6 @@ PRESENTATION_TYPE_EXAMPLE = PresentationType.EXAMPLE
 
 INDY_OR_KEY_DID_VALIDATE = IndyOrKeyDID()
 INDY_OR_KEY_DID_EXAMPLE = IndyOrKeyDID.EXAMPLE
+
+CSR_VALIDATE = CSR()
+CSR_EXAMPLE = CSR.EXAMPLE

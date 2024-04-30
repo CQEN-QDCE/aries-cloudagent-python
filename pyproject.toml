@@ -61,6 +61,15 @@ ursa-bbs-signatures= { version = "~1.0.1", optional = true }
 # indy
 python3-indy= { version = "^1.11.1", optional = true }
 
+# mdoc
+cbor2 = { version = "~5", optional = true } #<5.5.0,>=5.4.0
+cwt = { version = "~2", optional = true } #<2.4,>=2.3.0
+pycose = { version = "~1", optional = true } #<1.1.0,>=1.0.1
+
+#oid4vci
+oid4vci = { path = "/home/torjc01/CQEN-MCN/code/ongoing/merging/aries-acapy-plugins/oid4vci/", develop = true, optional = true }
+mso-mdoc = {path = "/home/torjc01/CQEN-MCN/code/ongoing/merging/aries-acapy-plugins/mso_mdoc", optional = true, develop = true}
+
 [tool.poetry.group.dev.dependencies]
 pre-commit="~3.3.3"
 # Sync with version in .pre-commit-config.yaml
@@ -96,6 +105,14 @@ bbs = [
 ]
 indy = [
      "python3-indy"
+]
+
+oid4vci = [
+    "oid4vci"
+]
+
+mdoc = [
+    "mso-mdoc"
 ]
 
 [tool.poetry.scripts]
