@@ -1,4 +1,5 @@
 import base64
+import base58
 import hashlib
 from   cryptography                                 import x509
 from   cryptography.x509.oid                        import NameOID
@@ -11,7 +12,7 @@ from   jwt                                          import InvalidSignatureError
 CURVE_P256      = "P256"
 CURVE_P384      = "P384"
 CURVE_P521      = "P521"
-CURVE_ED25519   = "Ed25519"
+# CURVE_ED25519   = "Ed25519"
 
 # Supported hashing algorithms
 HASH_SHA256     = "SHA256"
@@ -83,6 +84,17 @@ def keyFingerprint(pubkey):
     )
     return hashlib.sha256(der).hexdigest()
 
+def getVerkey(keypair):
+    """
+    This function returns the verification key of a given keypair.
+
+    Args:
+        keypair (EllipticCurvePrivateKey): The keypair for which to retrieve the verification key.
+
+    Returns:
+        EllipticCurvePublicKey: The verification key of the keypair.
+    """
+    return base58.b58encode(keypair.public_key())
 
 
 def convertKey(pubkey, **options):
@@ -173,9 +185,6 @@ def serializePubKey(pubKey, pubkeyFileName):
         f.close()
 
     return None
-
-
-
 
 def deserializePrivKey(privkeyFileName):
     """
