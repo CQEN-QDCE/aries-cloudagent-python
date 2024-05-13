@@ -8,6 +8,11 @@ from   cryptography.hazmat.primitives.asymmetric    import ec
 from   cryptography.hazmat.primitives               import serialization
 from   jwt                                          import InvalidSignatureError
 
+from aries_cloudagent.wallet.base import BaseWallet
+from aries_cloudagent.wallet.did_info import DIDInfo
+from ..config.injection_context import InjectionContext
+
+
 # Supported elliptic curves
 CURVE_P256      = "P256"
 CURVE_P384      = "P384"
@@ -84,17 +89,18 @@ def keyFingerprint(pubkey):
     )
     return hashlib.sha256(der).hexdigest()
 
-def getVerkey(keypair):
+def getVerkey(pubkey):
     """
-    This function returns the verification key of a given keypair.
+    This function returns the verification key of a given public key.
 
     Args:
-        keypair (EllipticCurvePrivateKey): The keypair for which to retrieve the verification key.
+        pubkey (EllipticCurvePublicKey): The public key for which to generate the verification key.
 
     Returns:
         EllipticCurvePublicKey: The verification key of the keypair.
     """
-    return base58.b58encode(keypair.public_key())
+    return base58.b58encode(pubkey.public_bytes(serialization.Encoding.DER,
+        serialization.PublicFormat.SubjectPublicKeyInfo,)).decode("utf-8")
 
 
 def convertKey(pubkey, **options):
@@ -202,3 +208,23 @@ def deserializePrivKey(privkeyFileName):
 
     return privKey
 
+
+async def write_did_to_wallet(context: InjectionContext, did: str, verkey: str, metadata: dict = None):
+    """
+    Write a new DID to the wallet.
+
+    Args:
+        context (InjectionContext): The context for dependency injection.
+        did (str): The new DID to write.
+        verkey (str): The verification key associated with the new DID.
+        metadata (dict, optional): Metadata to associate with the new DID.
+    """
+    
+    # Get the wallet instance from the context
+    wallet: BaseWallet = await context.inject(BaseWallet)
+
+    # Create a DIDInfo instance
+    did_info = DIDInfo(did, verkey, metadata)
+
+    # Write the new DID to the wallet
+    await wallet.set_did_info(did_info)

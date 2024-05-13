@@ -74,8 +74,8 @@ from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyT
 from .util import EVENT_LISTENER_PATTERN
 
 # torjc01
-from .ecdsa import generateKeypair, serializePair, deserializePrivKey, keyFingerprint, convertKey
-from .x509 import create_csr, serializeCSR, sign, verify
+from .ecdsa import generateKeypair, getVerkey, serializePair, deserializePrivKey, keyFingerprint, convertKey, write_did_to_wallet
+from .x509 import create_csr, sign, verify
 from .ecdsa import HASH_SHA256, HASH_SHA384, HASH_SHA512, SIGNING_ALGORITHMS, CURVE_P256, CURVE_P384, CURVE_P521
 # from .util import bytes_to_b58
 from cryptography.hazmat.primitives import serialization
@@ -1590,6 +1590,8 @@ async def wallet_x509_keypair(request: web.BaseRequest):
 
     context: AdminRequestContext = request["context"]
 
+    profile = context.profile
+
     try:
         body = await request.json()
     except Exception:
@@ -1643,6 +1645,20 @@ async def wallet_x509_keypair(request: web.BaseRequest):
 
     with open(f"{did}{keyId}.json", "w") as f:
         json.dump(document, f, indent=2)
+
+    
+    verkey = getVerkey(keypair.public_key()) # "WgWxqztrNooG92RXvxSTWv"   
+
+    print("Verkey: ", verkey)
+
+    # Insert did into wallet
+    async with profile.session() as session:
+        wallet = session.inject(BaseWallet)
+        if not wallet:
+            raise web.HTTPForbidden(reason="No wallet available") 
+    
+        write_did_to_wallet(context, did, verkey)
+
 
     # Serialize the keypair
     serializePair(keypair.public_key(), 
