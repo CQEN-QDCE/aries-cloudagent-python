@@ -221,7 +221,7 @@ async def write_did_to_wallet(wallet: BaseWallet, did: str, verkey: str, metadat
     # wallet: BaseWallet = await context.inject(BaseWallet)
 
     # Create a DIDInfo instance
-    did_info = DIDInfo(did, verkey, metadata)
+    did_info = DIDInfo(did, verkey, metadata) #, DIDMethod.WEB, KeyType.ED25519)
 
     # Write the new DID to the wallet
     await wallet.set_did_info(did_info)
