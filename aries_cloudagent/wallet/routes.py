@@ -1465,15 +1465,7 @@ class x509KeypairRequestSchema(OpenAPISchema):
             "example": "example.com",
         },
     )
-    alias = fields.Str(
-        required=False,
-        metadata={
-            "description": "Alias attributed to the generated key pair. Mandatory for key DID method.", 
-            "example": "keypair-newUser",
-        },
-    )
     
-
 class x509KeypairResultSchema(OpenAPISchema):
     result = fields.Nested(x509KeypairSchema())
 
@@ -1615,7 +1607,6 @@ async def wallet_x509_keypair(request: web.BaseRequest):
     keyType = request.query.get("keyType")
     method = request.query.get("method")
     controllerURL = request.query.get("controllerURL")
-    alias = request.query.get("alias")
 
     # Initialize variables 
     results = []
@@ -1643,9 +1634,6 @@ async def wallet_x509_keypair(request: web.BaseRequest):
         "web"]: 
         raise web.HTTPBadRequest(reason="Invalid method")
     
-    if method.casefold() == "key" and alias is None:
-        raise web.HTTPBadRequest(reason="Alias is required")
-    
     if method.casefold() == "web" and controllerURL is None:
         raise web.HTTPBadRequest(reason="Controller URL is required")
     
@@ -1665,6 +1653,7 @@ async def wallet_x509_keypair(request: web.BaseRequest):
     elif method == "web":
         keyId = "#" + keyFingerprint(keypair.public_key())
         did = f"did:web:{controllerURL}{keyId}"
+        results.append({"controllerURL": controllerURL})
 
     document = {
         "id": did,
@@ -1702,9 +1691,7 @@ async def wallet_x509_keypair(request: web.BaseRequest):
                     f"{did}-priv.key")
 
     # Return the results
-    results.append({"controllerURL": controllerURL,
-                    "alias": alias,
-                    "did": did,
+    results.append({"did": did,
                     "keyId": keyId,
                     "keyType": keyType})
     
