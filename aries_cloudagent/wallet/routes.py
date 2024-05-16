@@ -4,10 +4,12 @@ import base64
 import json
 import logging
 import os
+from random import seed
 from typing import List, Optional, Tuple, Union
 
 from aiohttp import web
 from aiohttp_apispec import docs, querystring_schema, request_schema, response_schema
+from aries_askar import KeyAlg
 from marshmallow import fields, validate
 
 from aries_cloudagent.connections.base_manager import BaseConnectionManager
@@ -74,7 +76,7 @@ from .key_type import BLS12381G2, ED25519, ECDSAP256, ECDSAP384, ECDSAP521, KeyT
 from .util import EVENT_LISTENER_PATTERN
 
 # torjc01
-from .ecdsa import generateKeypair, getVerkey, serializePair, deserializePrivKey, keyFingerprint, convertKey, write_did_to_wallet
+from .ecdsa import generateKeyPairSeed, generateKeypair, getVerkey, serializePair, deserializePrivKey, keyFingerprint, convertKey, write_did_to_wallet
 from .x509 import create_csr, serializeCSR, sign, verify
 from .ecdsa import HASH_SHA256, HASH_SHA384, HASH_SHA512, SIGNING_ALGORITHMS, CURVE_P256, CURVE_P384, CURVE_P521
 # from .util import bytes_to_b58
@@ -1465,6 +1467,15 @@ class x509KeypairRequestSchema(OpenAPISchema):
             "example": "example.com",
         },
     )
+    seed = fields.Str(
+        required=True,
+        metadata={
+            "description": (
+                "Mandatory seed to use for DID generation."
+            ),
+            "example": "000000000000000000000000keypair1",
+        },
+    )
     
 class x509KeypairResultSchema(OpenAPISchema):
     result = fields.Nested(x509KeypairSchema())
@@ -1603,99 +1614,117 @@ async def wallet_x509_keypair(request: web.BaseRequest):
     # Retrieve the context
     context: AdminRequestContext = request["context"]
 
-    # Retrieve parameters
-    keyType = request.query.get("keyType")
-    method = request.query.get("method")
-    controllerURL = request.query.get("controllerURL")
-
-    # Initialize variables 
-    results = []
-    keyId   = None
-    keypair = None
-
-    # Validate input
-    if keyType is None: 
-        raise web.HTTPBadRequest(reason="Key type is required")
-    
-    if keyType == ED25519.key_type:
-        raise web.HTTPBadRequest(reason="Ed25519 is not supported")
-    
-    if keyType.casefold() not in [
-        "p256",
-        "p384",
-        "p521"]:
-        raise web.HTTPBadRequest(reason="Invalid key type")
-    
-    if method is None:
-        raise web.HTTPBadRequest(reason="Method is required")
-    
-    if method.casefold() not in [
-        "key",
-        "web"]: 
-        raise web.HTTPBadRequest(reason="Invalid method")
-    
-    if method.casefold() == "web" and controllerURL is None:
-        raise web.HTTPBadRequest(reason="Controller URL is required")
-    
-    # Generate the keypair
-
-    keypair = generateKeypair(keyType)
-
-    if keypair is None:
-        raise web.HTTPBadRequest(reason="Error generating keypair")
-    
-    # Generate the did identificator and write up the did document
-
-    if method == "key":
-        keyId = keyFingerprint(keypair.public_key())
-        did = f"did:key:{keyId}"
-
-    elif method == "web":
-        keyId = "#" + keyFingerprint(keypair.public_key())
-        did = f"did:web:{controllerURL}{keyId}"
-        results.append({"controllerURL": controllerURL})
-
-    document = {
-        "id": did,
-        "verificationMethod": [
-            {
-                "id": f"{did}",
-                "type": keyType, 
-                "publicKey" : convertKey(
-                    keypair.public_key(),
-                    kid=keyId,
-                    alg=SIGNING_ALGORITHMS[keypair.public_key().key_size],
-                ),
-            }
-        ]
-    }
-
-    verkey = "mB92K27uhbUJU1p1rwW1gFWFOEjXk" #getVerkey(keypair)
-
-    print("Verkey: ", verkey)
-
-    # Insert the document into the wallet 
     async with context.session() as session:
+
+        # Retrieve parameters
+        keyType = request.query.get("keyType")
+        method = request.query.get("method")
+        controllerURL = request.query.get("controllerURL")
+        seed = request.query.get("seed")
+
+        # Initialize variables 
+        results = []
+        keyId   = None
+        keypair = None
+
+        did_methods: DIDMethods = session.inject(DIDMethods)
+        filter_method: DIDMethod | None = did_methods.from_method(
+                request.query.get("method")
+        )
+        #print("Filter method: ", filter_method.method_name)
+
+        key_types = session.inject(KeyTypes)
+        key_type = (key_types.from_key_type(request.query.get("keyType")))
+
+        # Validate input
+        if keyType is None: 
+            raise web.HTTPBadRequest(reason="Key type is required")
+        
+        if keyType == ED25519.key_type:
+            raise web.HTTPBadRequest(reason="Ed25519 is not supported")
+        
+        if keyType.casefold() not in [
+            "p256",
+            "p384",
+            "p521"]:
+            raise web.HTTPBadRequest(reason="Invalid key type")
+        
+        if method is None:
+            raise web.HTTPBadRequest(reason="Method is required")
+        
+        if method.casefold() not in [
+            "key",
+            "web"]: 
+            raise web.HTTPBadRequest(reason="Invalid method")
+        
+        if method.casefold() == "web" and controllerURL is None:
+            raise web.HTTPBadRequest(reason="Controller URL is required")
+        
+        # Generate the keypair
+        keypair = generateKeypair(keyType)
+
+        if keypair is None:
+            raise web.HTTPBadRequest(reason="Error generating keypair")
+        
+        # Generate the did identificator and write up the did document
+
+        if method == "key":
+            keyId = keyFingerprint(keypair.public_key())
+            did = f"did:key:{keyId}"
+
+        elif method == "web":
+            keyId = "#" + keyFingerprint(keypair.public_key())
+            did = f"did:web:{controllerURL}{keyId}"
+            results.append({"controllerURL": controllerURL})
+
+        document = {
+            "id": did,
+            "verificationMethod": [
+                {
+                    "id": f"{did}",
+                    "type": keyType, 
+                    "publicKey" : convertKey(
+                        keypair.public_key(),
+                        kid=keyId,
+                        alg=SIGNING_ALGORITHMS[keypair.public_key().key_size],
+                    ),
+                }
+            ]
+        }
+
+        # verkey = "mB92K27uhbUJU1p1rwW1gFWFOEjXk" #getVerkey(keypair)
+
+        #print("Verkey: ", verkey)
+
+        key = generateKeyPairSeed(KeyAlg.P256, seed)
+        verkey = getVerkey(key.get_public_bytes())
+        
+        # Insert the keypair and the DID document into the wallet 
         wallet = session.inject_or(BaseWallet)
         if not wallet:
-            raise web.HTTPForbidden(reason="No wallet available")
-       #await write_did_to_wallet(wallet, did, verkey)
+                raise web.HTTPForbidden(reason="No wallet available")
 
-    # Serialize the keypair for debugging in development. Should be removed in production. 
-    with open(f"{did}.json", "w") as f:
-        json.dump(document, f, indent=2)
+        try:
+            newDID = await wallet.create_ecdsa_did(did, filter_method, key_type, key, verkey, document)
+            print("=============NEW OID: ", newDID)
+        except WalletError as err:
+            raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-    serializePair(keypair.public_key(),
-                    f"{did}-pub.key",
-                    keypair,
-                    f"{did}-priv.key")
+        # Serialize the keypair for debugging in development. Should be removed in production. 
+        with open(f"{did}.json", "w") as f:
+            json.dump(document, f, indent=2)
 
-    # Return the results
-    results.append({"did": did,
-                    "keyId": keyId,
-                    "keyType": keyType})
-    
-    return web.json_response({"results": results})
+        serializePair(keypair.public_key(),
+                        f"{did}-pub.key",
+                        keypair,
+                        f"{did}-priv.key")
+
+        # Return the results
+        results.append({"did": did,
+                        "keyId": keyId,
+                        "keyType": keyType})
+        
+        return web.json_response({"results": results})
 
 
 @docs(tags=["wallet"], summary="Create a Certificate Signing Request (CSR) for a x509 certificate")

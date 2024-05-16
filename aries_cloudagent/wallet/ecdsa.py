@@ -1,4 +1,5 @@
 import base64
+from aries_askar import Key, KeyAlg
 import base58
 import hashlib
 from   cryptography                                 import x509
@@ -34,6 +35,15 @@ SIGNING_ALGORITHMS = {
     521: "ES512",
 }
 
+
+def generateKeyPairSeed(curveName: KeyAlg, seed: bytes):
+
+    key = Key.from_seed(curveName, seed) 
+    #private_key_bytes = hashlib.sha256(seed).digest()
+    #private_key_number = int.from_bytes(private_key_bytes, "big")
+
+    #return ec.derive_private_key(private_key_number, ec.SECP256R1())
+    return key 
 
 def generateKeypair(curveName: str):
     """
@@ -88,7 +98,7 @@ def keyFingerprint(pubkey):
     )
     return hashlib.sha256(der).hexdigest()
 
-def getVerkey(keypair):
+def getVerkey(bytes):
     """
     This function returns the verification key of a given keypair.
 
@@ -98,7 +108,7 @@ def getVerkey(keypair):
     Returns:
         EllipticCurvePublicKey: The verification key of the keypair.
     """
-    return base58.b58encode(keypair.public_key())
+    return base58.b58encode(bytes).decode("utf-8")
 
 
 def convertKey(pubkey, **options):
@@ -118,7 +128,7 @@ def convertKey(pubkey, **options):
     result is a dictionary that represents the public key in a more accessible format.
     """
     numbers = pubkey.public_numbers()
-    size = (numbers.curve.key_size + 7) // 8
+    size = (numbers.curve.key_size + 7) // 8    # ====================>>>> 
     x = numbers.x.to_bytes(size, "big")
     y = numbers.y.to_bytes(size, "big")
     return {
@@ -225,3 +235,24 @@ async def write_did_to_wallet(wallet: BaseWallet, did: str, verkey: str, metadat
 
     # Write the new DID to the wallet
     await wallet.set_did_info(did_info)
+
+ 
+async def generateDIDDocument(did, keyType, keypair, keyId=None): 
+
+    document = {
+        "id": did,
+        "verificationMethod": [
+            {
+                "id": f"{did}",
+                "type": keyType, 
+                "publicKey" : convertKey(
+                    keypair.public_key(),
+                    kid=keyId,
+                    alg=SIGNING_ALGORITHMS[256],
+                    #alg=SIGNING_ALGORITHMS[keypair.public_key().key_size],
+                ),
+            }
+        ]
+    }
+    
+    return "" 

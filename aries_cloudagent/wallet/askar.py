@@ -259,6 +259,73 @@ class AskarWallet(BaseWallet):
             did=did, verkey=verkey, metadata=metadata, method=method, key_type=key_type
         )
 
+    #async def create_ecdsa_did(
+    #    self,
+    #    did: Optional[str] = None,
+    #    method: DIDMethod = None,
+    #    key_type: KeyType = None,
+    #    metadata: Optional[dict] = None,
+    #) -> DIDInfo:
+    async def create_ecdsa_did(
+            self, 
+            did: Optional[str] = None, 
+            method: DIDMethod = None, 
+            key_type: KeyType = None, 
+            keypair: Optional[Key] = None,
+            verkey: Optional[str] = None,
+            metadata: Optional[dict] = None,
+    ) -> DIDInfo:    
+        """
+        """
+
+        # Validate DID
+        #did_validation = DIDParametersValidation(
+        #    self._session.context.inject(DIDMethods)
+        #)
+        #did_validation.validate_key_type(method, key_type)
+        
+        if not metadata:
+            metadata = {}
+
+        try: 
+            await self._session.handle.insert_key(
+                verkey, keypair, metadata=json.dumps(metadata)
+            )
+        except AskarError as err:
+            if err.code == AskarErrorCode.DUPLICATE:
+                pass
+                # raise WalletError("Verkey already present in the wallet") from err
+            else:
+                raise WalletError("Error inserting key") from err   
+
+        value_json = {
+            "did": did,
+            "method": method.method_name,
+            "verkey": verkey,
+            "verkey_type": key_type.key_type,
+            "metadata": metadata,
+        }
+        tags = {
+            "method": method.method_name,
+            "verkey": verkey,
+            "verkey_type": key_type.key_type,
+        }
+        
+        try: 
+            await self._session.handle.insert(
+                CATEGORY_DID,
+                did,
+                value_json=value_json,
+                tags=tags,
+            )
+        except AskarError as err:
+            raise WalletError("Duplicate entry. Error creating the new DID") from err
+
+        return DIDInfo(
+            did=did, verkey=verkey, metadata=metadata, method=method, key_type=key_type
+        )
+    
+
     async def store_did(self, did_info: DIDInfo) -> DIDInfo:
         """Store a DID in the wallet.
 
