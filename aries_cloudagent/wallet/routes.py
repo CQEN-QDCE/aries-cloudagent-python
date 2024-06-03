@@ -1425,7 +1425,7 @@ class x509KeypairSchema(OpenAPISchema):
         required=True,
         metadata={
             "description": "DID web of the keypair", 
-            "example": "did:web:exemple.com#ab2341be",
+            "example": "did:key:89110096765b091907fb69f30af12c0cad6c2d326d6926a7740585ba5471f09a",
         },
     )
     keyType = fields.Str(
@@ -1437,7 +1437,7 @@ class x509KeypairSchema(OpenAPISchema):
         required=False,
         metadata={
             "description": "The key identifier", 
-            "example": "6f17d22bba15001f",
+            "example": "89110096765b091907fb69f30af12c0cad6c2d326d6926a7740585ba5471f09a",
         },
     )
     
@@ -1445,7 +1445,7 @@ class x509KeypairRequestSchema(OpenAPISchema):
 
     keyType = fields.Str(
         required=True,
-        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type, ED25519.key_type]),
+        validate=validate.OneOf([ECDSAP256.key_type, ECDSAP384.key_type, ECDSAP521.key_type]),
         metadata={"example": ECDSAP256.key_type, "description": "Key type to query for."},
     )
     method = fields.Str(
@@ -1468,12 +1468,12 @@ class x509KeypairRequestSchema(OpenAPISchema):
         },
     )
     seed = fields.Str(
-        required=True,
+        required=False,
         metadata={
             "description": (
-                "Mandatory seed to use for DID generation."
+                "Seed to use for DID generation."
             ),
-            "example": "000000000000000000000000keypair1",
+            "example": "keypairseed000000000000000000001",
         },
     )
     
@@ -1627,16 +1627,25 @@ async def wallet_x509_keypair(request: web.BaseRequest):
         keyId   = None
         keypair = None
 
+        # Retrieve the DID method and key type
         did_methods: DIDMethods = session.inject(DIDMethods)
-        filter_method: DIDMethod | None = did_methods.from_method(
+        did_method: DIDMethod | None = did_methods.from_method(
                 request.query.get("method")
         )
-        #print("Filter method: ", filter_method.method_name)
+        print("Did method: ", did_method.method_name)
 
         key_types = session.inject(KeyTypes)
         key_type = (key_types.from_key_type(request.query.get("keyType")))
 
         # Validate input
+        if method.casefold() not in [
+            "key",
+            "web"]: 
+            raise web.HTTPBadRequest(reason="Invalid method")
+        
+        if method.casefold() == "web" and controllerURL is None:
+            raise web.HTTPBadRequest(reason="Controller URL is required")
+        
         if keyType is None: 
             raise web.HTTPBadRequest(reason="Key type is required")
         
@@ -1652,16 +1661,12 @@ async def wallet_x509_keypair(request: web.BaseRequest):
         if method is None:
             raise web.HTTPBadRequest(reason="Method is required")
         
-        if method.casefold() not in [
-            "key",
-            "web"]: 
-            raise web.HTTPBadRequest(reason="Invalid method")
-        
-        if method.casefold() == "web" and controllerURL is None:
-            raise web.HTTPBadRequest(reason="Controller URL is required")
-        
         # Generate the keypair
-        keypair = generateKeypair(keyType)
+        if seed is None:
+            keypair = generateKeypair(keyType)
+        else:
+            keypair = generateKeyPairSeed(key_type.key_type, seed)
+        
 
         if keypair is None:
             raise web.HTTPBadRequest(reason="Error generating keypair")
@@ -1669,7 +1674,7 @@ async def wallet_x509_keypair(request: web.BaseRequest):
         # Generate the did identificator and write up the did document
 
         if method == "key":
-            keyId = keyFingerprint(keypair.public_key())
+            keyId = keyFingerprint(keypair.get_public_bytes())
             did = f"did:key:{keyId}"
 
         elif method == "web":
@@ -1683,21 +1688,16 @@ async def wallet_x509_keypair(request: web.BaseRequest):
                 {
                     "id": f"{did}",
                     "type": keyType, 
-                    "publicKey" : convertKey(
-                        keypair.public_key(),
-                        kid=keyId,
-                        alg=SIGNING_ALGORITHMS[keypair.public_key().key_size],
-                    ),
+                    #"publicKey" : convertKey(
+                    #    keypair.get_public_bytes(),
+                    #     kid=keyId,
+                    #     alg=SIGNING_ALGORITHMS[keypair.get_public_bytes()],
+                    #),
                 }
             ]
         }
 
-        # verkey = "mB92K27uhbUJU1p1rwW1gFWFOEjXk" #getVerkey(keypair)
-
-        #print("Verkey: ", verkey)
-
-        key = generateKeyPairSeed(KeyAlg.P256, seed)
-        verkey = getVerkey(key.get_public_bytes())
+        verkey = getVerkey(keypair.get_public_bytes())
         
         # Insert the keypair and the DID document into the wallet 
         wallet = session.inject_or(BaseWallet)
@@ -1705,7 +1705,7 @@ async def wallet_x509_keypair(request: web.BaseRequest):
                 raise web.HTTPForbidden(reason="No wallet available")
 
         try:
-            newDID = await wallet.create_ecdsa_did(did, filter_method, key_type, key, verkey, document)
+            newDID = await wallet.create_ecdsa_did(did, did_method, key_type, keypair, verkey, document)
             print("=============NEW OID: ", newDID)
         except WalletError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
@@ -1714,9 +1714,9 @@ async def wallet_x509_keypair(request: web.BaseRequest):
         with open(f"{did}.json", "w") as f:
             json.dump(document, f, indent=2)
 
-        serializePair(keypair.public_key(),
+        serializePair(keypair.get_public_bytes(),
                         f"{did}-pub.key",
-                        keypair,
+                        keypair.get_secret_bytes(),
                         f"{did}-priv.key")
 
         # Return the results
@@ -2015,7 +2015,7 @@ async def register(app: web.Application):
             # web.get("/wallet/did/csr", wallet_did_csr, allow_head=False),
             web.post("/wallet/x509/keypair", wallet_x509_keypair),
             web.post("/wallet/x509/csr", wallet_x509_create_csr),
-            web.get("/wallet/x509/csr", wallet_x509_get_csr, allow_head=False),
+            # web.get("/wallet/x509/csr", wallet_x509_get_csr, allow_head=False),
             web.post("/wallet/x509/sign", wallet_x509_sign),
             web.post("/wallet/x509/verify", wallet_x509_verify),
         ]
